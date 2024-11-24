@@ -1,2 +1,2 @@
 # ADAPT
-Autonomous Change Detection and Propagation Toolkit
+Autonomous change Detection And Propagation Toolkit
