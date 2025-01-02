@@ -1,0 +1,57 @@
+import os
+from pydantic import BaseModel
+from enum import Enum
+from pprint import pprint
+import json
+
+from core.llm_handlers.factory import create_llm_handler
+from core.llm_handlers.template_to_prompt import get_system_prompt, generate_prompt_from_template
+
+class PortConfig(Enum):
+    dynamic = "dynamic"
+    static = "static"
+
+class Methods(BaseModel):
+    method: str
+    description: str
+
+class ExposedEndpoints(BaseModel):
+    endpoint: str
+    methods: list[Methods]
+
+class ConsumedEndpoints(BaseModel):
+    endpoint: str
+    methods: list[Methods]
+    port_config: PortConfig
+    port: str
+
+class OnboardingSchema(BaseModel):
+    exposed_endpoints: list[ExposedEndpoints]
+    consumed_endpoints: list[ConsumedEndpoints]
+    is_swagger_supported: bool
+    swagger_endpoint: str
+    project_name: str
+    project_guid: str
+    port: str
+    communication_protocol: str
+    is_tls_supported: bool
+
+
+if __name__ == "__main__":
+    # Step 1: Define the template and repository details
+    template = "/Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/ADAPT/central-system/onboarding/prompt_templates/extract_onboarding_informations.json"
+    repository = "sms2sakthivel/order-manager"
+    branch = "master"
+    included_extensions = [".go", ".project.json"]
+
+    # Step 2: Create the OpenAIHandler with your API key
+    handler = create_llm_handler(provider="openai", api_key=os.environ["OPENAI_API_KEY"])
+
+    # Step 3: Generate the system prompt and user prompt
+    system_prompt = get_system_prompt(template)
+    user_prompt = generate_prompt_from_template(template, repo=repository, branch=branch, included_extensions=included_extensions)
+    model_name = "gpt-4o-mini"
+
+    # Step 4: Generate the JSON response using the OpenAIHandler
+    response:OnboardingSchema = handler.generate_json(system_prompt=system_prompt, user_prompt=user_prompt, json_schema=OnboardingSchema, model_name=model_name)
+    print(json.dumps(json.loads(response.json()), indent=4))

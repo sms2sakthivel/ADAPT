@@ -1,0 +1,850 @@
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/main.go ---
+package main
+
+import (
+	_ "github.com/sms2sakthivel/payment-manager/docs"
+	"github.com/sms2sakthivel/payment-manager/payments"
+)
+
+func main() {
+	// Step 1: Create a New Payment Service Application
+	app := payments.NewApp()
+
+	// Step 2: Start Server and Listen on the Port 8001
+	app.Listen(":8004")
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/app.go ---
+package payments
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/sms2sakthivel/payment-manager/payments/database"
+	"github.com/sms2sakthivel/payment-manager/payments/model"
+	"github.com/sms2sakthivel/payment-manager/payments/repository"
+	"github.com/sms2sakthivel/payment-manager/payments/routes"
+	"github.com/sms2sakthivel/payment-manager/payments/service"
+)
+
+func NewApp() *fiber.App {
+	// Step 1: Connect to the database
+	database.Connect()
+
+	// Step 2: Auto-migrate Payment schema
+	database.DB.AutoMigrate(&model.Payment{})
+
+	// Step 3: Initialize repository, service, and app
+	repo := &repository.GormPaymentRepository{DB: database.DB}
+	service := &service.PaymentService{Repo: repo}
+	app := fiber.New()
+
+	// Step 4: Enable Logger middleware with timing
+	app.Use(logger.New(logger.Config{
+		Format: "${time} - ${latency} - ${status} - ${method} ${path}\n",
+	}))
+
+	// Step 5: Register routes
+	routes.RegisterRoutes(app, service)
+	return app
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/database/sqlite3.go ---
+package database
+
+import (
+	"log"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+)
+
+var DB *gorm.DB
+
+// Connect initializes the SQLite database connection
+func Connect() {
+	db, err := gorm.Open(sqlite.Open("../payments.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	DB = db
+	log.Println("SQLite Database connected!")
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/repository/paymentinterface.go ---
+package repository
+
+import (
+	"github.com/sms2sakthivel/payment-manager/payments/model"
+)
+
+type PaymentRepository interface {
+	GetAllPayments() ([]model.Payment, error)
+	GetPaymentByID(id uint) (*model.Payment, error)
+	CreatePayment(Payment *model.Payment) error
+	UpdatePayment(Payment *model.Payment) error
+	DeletePayment(id uint) error
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/repository/paymentrepository.go ---
+package repository
+
+import (
+	"github.com/sms2sakthivel/payment-manager/payments/model"
+	"gorm.io/gorm"
+)
+
+type GormPaymentRepository struct {
+	DB *gorm.DB
+}
+
+func (repo *GormPaymentRepository) GetAllPayments() ([]model.Payment, error) {
+	var payments []model.Payment
+	err := repo.DB.Preload("PaymentMode").Find(&payments).Error
+	return payments, err
+}
+
+func (repo *GormPaymentRepository) GetPaymentByID(id uint) (*model.Payment, error) {
+	var payment model.Payment
+	err := repo.DB.Preload("PaymentMode").First(&payment, id).Error
+	return &payment, err
+}
+
+func (repo *GormPaymentRepository) CreatePayment(payment *model.Payment) error {
+	var paymentMode model.PaymentMode
+	err := repo.DB.First(&paymentMode, payment.PaymentModeID).Error
+	if err != nil {
+		return err
+	}
+	payment.PaymentMode = paymentMode
+	return repo.DB.Create(payment).Error
+}
+
+func (repo *GormPaymentRepository) UpdatePayment(payment *model.Payment) error {
+	return repo.DB.Save(payment).Error
+}
+
+func (repo *GormPaymentRepository) DeletePayment(id uint) error {
+	return repo.DB.Delete(&model.Payment{}, id).Error
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/model/paymentmodedb.go ---
+package model
+
+import "gorm.io/gorm"
+
+type PaymentMode struct {
+	gorm.Model
+	ID   uint   `gorm:"primaryKey"`
+	Mode string `gorm:"unique;not null"`
+}
+
+func (pm *PaymentMode) GetAPIResponseObject() *PaymentModeResponse {
+	return &PaymentModeResponse{ID: pm.ID, Mode: pm.Mode}
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/model/paymentdb.go ---
+package model
+
+import "gorm.io/gorm"
+
+type Payment struct {
+	gorm.Model
+	ID            uint `gorm:"primaryKey"`
+	OrderID       uint `gorm:"not null"`
+	Amount        uint `gorm:"not null"`
+	PaymentModeID uint `gorm:"not null"`
+
+	// Foreign key constraints
+	PaymentMode PaymentMode `gorm:"forignKey:PaymentModeID;reference:ID;constraint:OnDelete:CASCADE;OnUpdate:CASCADE;not null"`
+}
+
+func (payment *Payment) GetAPIResponseObject() *PaymentResponse {
+	return &PaymentResponse{ID: payment.ID, OrderID: payment.OrderID, Amount: payment.Amount, PaymentMode: *payment.PaymentMode.GetAPIResponseObject()}
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/model/paymentapi.go ---
+package model
+
+type PaymentCreateRequest struct {
+	OrderID       uint `json:"order_id"`
+	Amount        uint `json:"amount"`
+	PaymentModeID uint `json:"payment_mode_id"`
+}
+
+type PaymentUpdateRequest struct {
+	ID            uint `json:"payment_id"`
+	OrderID       uint `json:"order_id"`
+	Amount        uint `json:"amount"`
+	PaymentModeID uint `json:"payment_mode_id"`
+}
+
+func (pcr *PaymentCreateRequest) GetDBObject() *Payment {
+	return &Payment{OrderID: pcr.OrderID, Amount: pcr.Amount, PaymentModeID: pcr.PaymentModeID}
+}
+
+func (pur *PaymentUpdateRequest) GetDBObject() *Payment {
+	return &Payment{ID: pur.ID, OrderID: pur.OrderID, Amount: pur.Amount, PaymentModeID: pur.PaymentModeID}
+}
+
+type PaymentResponse struct {
+	ID          uint                `json:"payment_id"`
+	OrderID     uint                `json:"order_id"`
+	Amount      uint                `json:"amount"`
+	PaymentMode PaymentModeResponse `json:"payment_mode"`
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/model/migrate.go ---
+package model
+
+import (
+	"gorm.io/gorm"
+)
+
+func Automigrate(DB *gorm.DB) error {
+	return DB.AutoMigrate(&Payment{})
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/model/paymentmodeapi.go ---
+package model
+
+type PaymentModeResponse struct {
+	ID   uint   `json:"id"`
+	Mode string `json:"mode"`
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/model/dependentmodels.go ---
+package model
+
+type OrderResponse struct {
+	ID     uint         `json:"order_id"`
+	CartID uint         `json:"cart_id"`
+	Cart   CartResponse `json:"cart,omitempty"`
+}
+
+type CartResponse struct {
+	ID        uint               `json:"cart_id"`
+	CartItems []CartItemResponse `json:"cart_items"`
+	UserID    uint               `json:"user_id"`
+	CartValue uint               `json:"cart_value"`
+}
+
+type CartItemResponse struct {
+	ID        uint `json:"cart_item_id"`
+	ProductID uint `json:"product_id"`
+	Quantity  int  `json:"quantity"`
+	Discount  int  `json:"discount"`
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/service/dependentservice.go ---
+package service
+
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/client"
+	"github.com/sms2sakthivel/payment-manager/payments/model"
+)
+
+func GetOrderByID(id uint) (*model.OrderResponse, *fiber.Error) {
+	cli := client.New()
+	cli.SetTimeout(10 * time.Second)
+
+	// Send a GET request
+	resp, err := cli.Get(fmt.Sprintf("http://127.0.0.1:8003/orders/%d", id))
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	fmt.Printf("Status: %d\n", resp.StatusCode())
+	fmt.Printf("Body: %s\n", string(resp.Body()))
+	if resp.StatusCode() != 200 {
+		return nil, fiber.NewError(resp.StatusCode(), "Order Not Found")
+	}
+	var orderResponse model.OrderResponse
+	err = json.Unmarshal(resp.Body(), &orderResponse)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return &orderResponse, nil
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/service/paymentservice.go ---
+package service
+
+import (
+	"github.com/gofiber/fiber/v3"
+	"github.com/sms2sakthivel/payment-manager/payments/model"
+	"github.com/sms2sakthivel/payment-manager/payments/repository"
+)
+
+type PaymentService struct {
+	Repo repository.PaymentRepository
+}
+
+func (s *PaymentService) GetPayments() ([]model.PaymentResponse, error) {
+	dbPayments, err := s.Repo.GetAllPayments()
+	if err != nil {
+		return nil, err
+	}
+	var payments []model.PaymentResponse = []model.PaymentResponse{}
+	for _, payment := range dbPayments {
+		payments = append(payments, *payment.GetAPIResponseObject())
+	}
+	return payments, nil
+}
+
+func (s *PaymentService) GetPayment(id uint) (*model.PaymentResponse, error) {
+	payment, err := s.Repo.GetPaymentByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return payment.GetAPIResponseObject(), err
+}
+
+func (s *PaymentService) CreatePayment(paymentReq *model.PaymentCreateRequest) (*model.PaymentResponse, *fiber.Error) {
+	// Step 1: Check if the OrderID is Valid
+	order, err := GetOrderByID(paymentReq.OrderID)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	// Step 2: Check if the order cart value is equal to the payment amount
+	if order.Cart.CartValue != paymentReq.Amount {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Payment & Cart Value Amount Mismatch")
+	}
+	payment := paymentReq.GetDBObject()
+	er := s.Repo.CreatePayment(payment)
+	if er != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, er.Error())
+	}
+	return payment.GetAPIResponseObject(), nil
+}
+
+func (s *PaymentService) UpdatePayment(paymentReq *model.PaymentUpdateRequest) (*model.PaymentResponse, *fiber.Error) {
+	// Step 1: Check if the OrderID is Valid
+	order, err := GetOrderByID(paymentReq.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	// Step 2: Check if the order cart value is equal to the payment amount
+	if order.Cart.CartValue != paymentReq.Amount {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Payment & Cart Value Amount Mismatch")
+	}
+	payment := paymentReq.GetDBObject()
+	er := s.Repo.UpdatePayment(payment)
+	return payment.GetAPIResponseObject(), fiber.NewError(fiber.StatusInternalServerError, er.Error())
+}
+
+func (s *PaymentService) DeletePayment(id uint) error {
+	return s.Repo.DeletePayment(id)
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/payments/routes/paymentroutes.go ---
+package routes
+
+import (
+	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
+	"github.com/sms2sakthivel/payment-manager/payments/model"
+	"github.com/sms2sakthivel/payment-manager/payments/service"
+)
+
+func RegisterRoutes(app *fiber.App, service *service.PaymentService) {
+	app.Get("/", PaymentServiceInfo)
+	app.Get("/swagger/*", swagger.HandlerDefault)
+	app.Get("/payments", func(c *fiber.Ctx) error { return GetAllPayments(c, service) })
+	app.Get("/payments/:id", func(c *fiber.Ctx) error { return GetPaymentByID(c, service) })
+	app.Post("/payments", func(c *fiber.Ctx) error { return CreatePayment(c, service) })
+	app.Put("/payments/:id", func(c *fiber.Ctx) error { return UpdatePayment(c, service) })
+	app.Delete("/payments/:id", func(c *fiber.Ctx) error { return DeletePayment(c, service) })
+}
+
+// PaymentServiceInfo returns information about the Payment Service
+//
+// @Summary      Payment Service Info
+// @Description  Returns basic information about the Payment Service
+// @Tags         General
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       / [get]
+func PaymentServiceInfo(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{"message": "Payment Service"})
+}
+
+// GetAllPayments retrieves all payments
+//
+// @Summary      Get All Payments
+// @Description  Retrieve a list of all payments
+// @Tags         Payments
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}   model.PaymentResponse
+// @Failure      500  {object}  fiber.Error
+// @Router       /payments [get]
+func GetAllPayments(c *fiber.Ctx, service *service.PaymentService) error {
+	payments, err := service.GetPayments()
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(payments)
+}
+
+// GetPaymentByID retrieves a payment by their ID
+//
+// @Summary      Get Payment by ID
+// @Description  Retrieve a payment by their ID
+// @Tags         Payments
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Payment ID"
+// @Success      200  {object}  model.PaymentResponse
+// @Failure      404  {object}  fiber.Error
+// @Failure      500  {object}  fiber.Error
+// @Router       /payments/{id} [get]
+func GetPaymentByID(c *fiber.Ctx, service *service.PaymentService) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	payment, err := service.GetPayment(uint(id))
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Payment not found")
+	}
+	return c.JSON(payment)
+}
+
+// CreatePayment adds a new payment
+//
+// @Summary      Create a New Payment
+// @Description  Add a new payment to the system
+// @Tags         Payments
+// @Accept       json
+// @Produce      json
+// @Param        payment  body      model.PaymentCreateRequest  true  "Payment details"
+// @Success      201   {object}  model.PaymentResponse
+// @Failure      400   {object}  fiber.Error
+// @Failure      500   {object}  fiber.Error
+// @Router       /payments [post]
+func CreatePayment(c *fiber.Ctx, service *service.PaymentService) error {
+	var paymentReq model.PaymentCreateRequest
+	if err := c.BodyParser(&paymentReq); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid input")
+	}
+	payment, err := service.CreatePayment(&paymentReq)
+	if err != nil {
+		return c.Status(err.Code).JSON(err.Error())
+		// return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return c.Status(fiber.StatusCreated).JSON(payment)
+}
+
+// UpdatePayment modifies details of an existing payment
+//
+// @Summary      Update an Existing Payment
+// @Description  Modify details of an existing payment
+// @Tags         Payments
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int         true  "Payment ID"
+// @Param        payment  body      model.PaymentUpdateRequest  true  "Updated payment details"
+// @Success      200   {object}  model.PaymentResponse
+// @Failure      400   {object}  fiber.Error
+// @Failure      404   {object}  fiber.Error
+// @Failure      500   {object}  fiber.Error
+// @Router       /payments/{id} [put]
+func UpdatePayment(c *fiber.Ctx, service *service.PaymentService) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	var paymentReq model.PaymentUpdateRequest
+	if err := c.BodyParser(&paymentReq); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid input")
+	}
+	paymentReq.ID = uint(id)
+	payment, err := service.UpdatePayment(&paymentReq)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(payment)
+}
+
+// DeletePayment removes a payment by their ID
+//
+// @Summary      Delete a Payment
+// @Description  Remove a payment by their ID
+// @Tags         Payments
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "Payment ID"
+// @Success      204
+// @Failure      500  {object}  fiber.Error
+// @Router       /payments/{id} [delete]
+func DeletePayment(c *fiber.Ctx, service *service.PaymentService) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	if err := service.DeletePayment(uint(id)); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+
+--- /Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/payment-manager/docs/docs.go ---
+// Package docs Code generated by swaggo/swag. DO NOT EDIT
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": {{ marshal .Schemes }},
+    "swagger": "2.0",
+    "info": {
+        "description": "{{escape .Description}}",
+        "title": "{{.Title}}",
+        "contact": {},
+        "version": "{{.Version}}"
+    },
+    "host": "{{.Host}}",
+    "basePath": "{{.BasePath}}",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Returns basic information about the Payment Service",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "General"
+                ],
+                "summary": "Payment Service Info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments": {
+            "get": {
+                "description": "Retrieve a list of all payments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get All Payments",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.PaymentResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add a new payment to the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Create a New Payment",
+                "parameters": [
+                    {
+                        "description": "Payment details",
+                        "name": "payment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PaymentCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.PaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}": {
+            "get": {
+                "description": "Retrieve a payment by their ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get Payment by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PaymentResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Modify details of an existing payment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Update an Existing Payment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated payment details",
+                        "name": "payment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PaymentUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Remove a payment by their ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Delete a Payment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_gofiber_fiber_v2.Error"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_gofiber_fiber_v2.Error": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.PaymentCreateRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "payment_mode_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.PaymentModeResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.PaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "payment_id": {
+                    "type": "integer"
+                },
+                "payment_mode": {
+                    "$ref": "#/definitions/model.PaymentModeResponse"
+                }
+            }
+        },
+        "model.PaymentUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "payment_id": {
+                    "type": "integer"
+                },
+                "payment_mode_id": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info so clients can modify it
+var SwaggerInfo = &swag.Spec{
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
+	Schemes:          []string{},
+	Title:            "",
+	Description:      "",
+	InfoInstanceName: "swagger",
+	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
+}
+
+func init() {
+	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+}
+
