@@ -1,4 +1,4 @@
-{
+extract_onboarding_informations = {
   "system": "You are an intelligent assistant tasked to analyse and extract important details and dependencies of server/client in a larger solution. You always be correct and accurate in analysing and extracting requested informations.",
   "purpose": "Analyze the source code provided below and extract the requested details as mentioned in the 'instructions' and generate the json output as exactly mentioned in the example json output.",
   "instructions": [
@@ -68,7 +68,7 @@
           }
         ],
         "port_config": "static",
-        "port": "8005"
+        "port": 8005
       },
       {
         "endpoint": "/voucher/{id}",
@@ -79,15 +79,14 @@
           }
         ],
         "port_config": "dynamic",
-        "port": "8006"
+        "port": 8006
       }
     ],
-    "is_swagger_supported": true,
+    "is_swagger_supported": True,
     "swagger_endpoint": "/swagger/*",
     "project_name": "User Management Service",
-    "project_guid": "0834E276-D8E3-46D6-A36E-1D8BEB257B5C",
-    "port": ":8001",
+    "port": 8001,
     "communication_protocol": "HTTP",
-    "is_tls_supported": false
+    "is_tls_supported": False
   }
 }
