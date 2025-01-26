@@ -1,0 +1,49 @@
+type Repository {
+    id: ID
+    url: String
+    repo_branches: [RepoBranch]
+}
+
+type RepoBranch {
+    id: ID!
+    branch: String!
+    included_extensions: [String]!
+    status: String
+    services: [Service]!
+    clients: [Client]!
+}
+
+type Service {
+    id: ID
+    port: Int!
+    exposed_endpoints: [Endpoint]!
+}
+
+type Client {
+    id: ID
+    consumed_endpoints: [Endpoint]!
+}
+
+type Endpoint {
+    id: ID
+    url: String!
+    method: String!
+    description: String!
+    specification: String!
+}
+
+type Query {
+    repositories: [Repository]
+    repository(id: ID!): Repository
+    services: [Service]
+    service(id: ID!): Service
+    clients: [Client]
+    client(id: ID!): Client
+    endpoints: [Endpoint]
+    endpoint(id: ID!): Endpoint
+}
+
+type Mutation {
+    onboardRepository(url: String!, branch: String!, included_extensions: [String]!): Repository!
+    # deleteRepository(id: ID!): Repository!
+}

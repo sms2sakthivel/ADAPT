@@ -1,7 +1,12 @@
+from typing import List
+import time
+
 from crewai import Crew, Agent, Task
 from .agent_output_model import OnboardingDataModel, ProjectDataModel
 from central_system.templates import extract_onboarding_informations
 from .onboarding_handler import OnboardingHandler
+from central_system.database import SessionLocal
+from central_system.database.onboarding import Repository, RepoBranch, OnboardingStatus
 
 from adaptutils import get_branch_source_dump
 
@@ -36,6 +41,88 @@ class OnboardingCrew:
             tasks=[self.source_code_analysis_task],
             verbose=True,
         )
+
+    def onboard(
+        self, repository: str, branch: str, included_extensions: List[str]
+    ) -> str:
+        source_code = get_branch_source_dump(
+            repo=repository,
+            branch=branch,
+            included_extensions=included_extensions,
+        )
+        example_output = extract_onboarding_informations["example_json_output"]
+        inputs = {"source": source_code, "example_json_output": example_output}
+
+        # Step 2.2: Run the Crew and get the Final output
+        results = self.onboarding_crew.kickoff(inputs=inputs)
+
+        # Step 2.3: Validate the Agent output and Onboard the Repository
+        meta_data = ProjectDataModel(repository_url=repository, branch_name=branch)
+        handler = OnboardingHandler(meta_data)
+
+        ok, error = handler.onboard(results.json)
+        if not ok:
+            print(error)
+            return ok, error
+
+        print(f"Onboarding Repo: {repository} Branch: {branch} successful.")
+        return True, "Success"
+
+    def run_demon(self) -> str:
+        while True:
+            time.sleep(1)
+            with SessionLocal() as db:
+                try:
+                    result = (
+                        db.query(Repository)
+                        .join(RepoBranch)
+                        .filter(RepoBranch.status == OnboardingStatus.PENDING)
+                        .all()
+                    )
+                    for repository in result:
+                        for repo_branch in repository.repo_branches:
+                            # Step 2.1: Retreive Source Code from the Repository and Prepare Agent inputs
+                            source_code = get_branch_source_dump(
+                                repo=repository.url,
+                                branch=repo_branch.branch,
+                                included_extensions=repo_branch.included_extensions,
+                            )
+                            example_output = extract_onboarding_informations[
+                                "example_json_output"
+                            ]
+                            inputs = {
+                                "source": source_code,
+                                "example_json_output": example_output,
+                            }
+
+                            # Step 2.2: Run the Crew and get the Final output
+                            results = self.onboarding_crew.kickoff(inputs=inputs)
+
+                            # Step 2.3: Validate the Agent output and Onboard the Repository
+                            meta_data = ProjectDataModel(
+                                repository_url=repository.url,
+                                branch_name=repo_branch.branch,
+                            )
+                            handler = OnboardingHandler(meta_data)
+
+                            ok, error = handler.onboard(results.json)
+                            if not ok:
+                                print(error)
+                                repo_branch.status = OnboardingStatus.FAILED
+                                db.commit()
+                                continue
+
+                            print(
+                                f"Onboarding Repo: {repository.url} Branch: {repo_branch.branch} successful."
+                            )
+                            repo_branch.status = OnboardingStatus.COMPLETED
+                            db.commit()
+                except Exception as e:
+                    print(e)
+                    db.rollback()
+                    continue
+                finally:
+                    db.close()
 
     def run(self) -> str:
         # Step 1: Define/Get the repository details

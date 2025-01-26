@@ -1,16 +1,17 @@
 from typing import Tuple, Optional
-from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from central_system.database import engine
 from .agent_output_model import OnboardingDataModel, ProjectDataModel
 from central_system.database.onboarding import (
-    Project,
     Service,
     Client,
     Endpoints,
     EndpointConsumers,
+    Repository,
+    RepoBranch,
 )
+from central_system.database import SessionLocal
 
 
 class OnboardingHandler:
@@ -33,68 +34,56 @@ class OnboardingHandler:
             return False, error
 
         # create entry in projects table if the UUID does not exist already
-        with Session(self.engine) as session:
+        with SessionLocal() as db:
             try:
-                # Step 1: Update Project Table
-                project: Optional[Project] = (
-                    session.query(Project)
-                    .filter(Project.repository_url == self.meta_data.repository_url)
+                # Step 1: Retrieve the repo details
+                repository_branch, repository = (
+                    db.query(RepoBranch, Repository)
+                    .join(Repository, RepoBranch.repository_id == Repository.id)
+                    .filter(Repository.url == self.meta_data.repository_url)
                     .first()
                 )
-                if not project:
-                    new_project = Project(
-                        name=self.data.project_name,
-                        repository_url=self.meta_data.repository_url,
+                if not repository:
+                    raise Exception(
+                        f"Repository {self.meta_data.repository_url} not found in the database."
                     )
-                    session.add(new_project)
-                    session.commit()
-                    project = new_project
+                elif not repository_branch:
+                    raise Exception(
+                        f"Branch {self.meta_data.branch_name} not found in the database."
+                    )
 
                 # Step 2: Update Services Table
                 service: Optional[Service] = (
-                    session.query(Service)
-                    .filter(
-                        and_(
-                            Service.project_id == project.id,
-                            Service.branch == self.meta_data.branch_name,
-                        )
-                    )
+                    db.query(Service)
+                    .filter(Service.repo_branches_id == repository_branch.id)
                     .first()
                 )
                 if not service:
                     new_service = Service(
-                        project_id=project.id,
+                        repo_branches_id=repository_branch.id,
                         port=self.data.port,
-                        branch=self.meta_data.branch_name,
                     )
-                    session.add(new_service)
-                    session.commit()
+                    db.add(new_service)
+                    db.commit()
                     service = new_service
 
                 # Step 3: Update Client Table
                 client: Optional[Client] = (
-                    session.query(Client)
-                    .filter(
-                        and_(
-                            Client.project_id == project.id,
-                            Client.branch == self.meta_data.branch_name,
-                        )
-                    )
+                    db.query(Client)
+                    .filter(Client.repo_branches_id == repository_branch.id)
                     .first()
                 )
                 if not client:
-                    new_client = Client(
-                        project_id=project.id, branch=self.meta_data.branch_name
-                    )
-                    session.add(new_client)
-                    session.commit()
+                    new_client = Client(repo_branches_id=repository_branch.id)
+                    db.add(new_client)
+                    db.commit()
                     client = new_client
 
                 # Step 4: Update Endpoints Table
                 for exposed_endpoint in self.data.exposed_endpoints:
                     for method in exposed_endpoint.methods:
                         endpoint = (
-                            session.query(Endpoints)
+                            db.query(Endpoints)
                             .filter(
                                 and_(
                                     Endpoints.service_id == service.id,
@@ -105,7 +94,7 @@ class OnboardingHandler:
                             .first()
                         )
                         if not endpoint:
-                            session.add(
+                            db.add(
                                 Endpoints(
                                     service_id=service.id,
                                     endpoint_url=exposed_endpoint.endpoint,
@@ -113,13 +102,13 @@ class OnboardingHandler:
                                     description=method.description,
                                 )
                             )
-                            session.commit()
+                            db.commit()
 
                 # Step 5: Update EndpointConsumer Table
                 for consumed_endpoints in self.data.consumed_endpoints:
                     for method in consumed_endpoints.methods:
                         endpoint_db_data: Optional[Endpoints] = (
-                            session.query(Endpoints)
+                            db.query(Endpoints)
                             .filter(
                                 and_(
                                     Endpoints.endpoint_url
@@ -138,7 +127,7 @@ class OnboardingHandler:
                             continue
 
                         endpoint: Optional[Endpoints] = (
-                            session.query(EndpointConsumers)
+                            db.query(EndpointConsumers)
                             .filter(
                                 and_(
                                     EndpointConsumers.endpoint_id
@@ -149,12 +138,12 @@ class OnboardingHandler:
                             .first()
                         )
                         if not endpoint:
-                            session.add(
+                            db.add(
                                 EndpointConsumers(
                                     endpoint_id=endpoint_db_data.id, client_id=client.id
                                 )
                             )
-                            session.commit()
+                            db.commit()
 
                 return (
                     True,
@@ -162,5 +151,5 @@ class OnboardingHandler:
                 )
             except Exception as e:
                 print(f"Error during onboarding: {e}")
-                session.rollback()
+                db.rollback()
                 return False, str(e)
