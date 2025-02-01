@@ -1,0 +1,82 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+*.txt
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Cache and temporary files
+*.bak
+*.swp
+*.swo
+.DS_Store
+*.~undo-tree~
+
+# PyCharm
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# MyPy
+.mypy_cache/
+
+# Pytest
+.cache/
+coverage.xml
+htmlcov/
+
+# Docker
+*.env
+docker-compose.override.yml
+
+# Poetry
+poetry.lock
+.pdm.toml
+
+# pipenv
+Pipfile.lock
+
+# Local `.env` files for sensitive configurations
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# AWS credentials
+.aws/
+
+# Ansible
+*.retry
+
+# Jupyter Notebook outputs
+*.ipynb_checkpoints
+
+# Pylint & Flake8
+pylint.log
+flake8.log
+
+# MacOS specific
+.DS_Store
+
+# Windows specific
+Thumbs.db

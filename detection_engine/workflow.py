@@ -19,9 +19,9 @@ class DetectionCrew:
         self.source_code_analysis_task: Task = self.get_source_code_analysis_task()
         self.onboarding_crew: Crew = self.get_onboarding_crew()
 
-    def get_source_code_analyzer_agent(self) -> Agent:
+    def get_pr_reviewer_agent(self) -> Agent:
         return Agent(
-            role="Source Code Analyzer",
+            role="",
             goal="Analyze the provided source code and extract the requested details as mentioned in the 'instructions' and generate the json output as exactly mentioned in the example json output.",
             backstory="You are an intelligent assistant tasked to analyse and extract important details and dependencies of server/client in a larger solution. You always be correct and accurate in analysing and extracting requested informations. you are abosolutely a professional in generating ready to use json output based on the extracted information and provided expected json sample output.",
             verbose=True,
