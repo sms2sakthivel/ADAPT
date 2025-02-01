@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 
 from adaptutils.githubutils import GitHubApp
+from detection_engine.workflow import DetectionCrew
 
 load_dotenv(".env", override=True)
 
@@ -38,16 +39,26 @@ load_dotenv(".env", override=True)
 #         for path, content in source_files.items():
 #             file.write(f"--- {path} ---\n{content}\n")
 
-from detection_engine.detection_engine import DetectionEngine
+# from detection_engine.detection_engine import DetectionEngine
+
+# if __name__ == "__main__":
+
+#     GITHUB_OWNER = "sms2sakthivel"
+#     GITHUB_REPO = "user-manager"
+#     PR_NUMBER = 1  # Replace with the PR number
+#     de = DetectionEngine()
+#     time = datetime.now()
+#     de.detect_pr_interface_changes(
+#         repo_owner=GITHUB_OWNER, repo_name=GITHUB_REPO, pr_number=PR_NUMBER
+#     )
+#     print(datetime.now() - time)
+
 
 if __name__ == "__main__":
-
-    GITHUB_OWNER = "sms2sakthivel"
-    GITHUB_REPO = "user-manager"
-    PR_NUMBER = 1  # Replace with the PR number
-    de = DetectionEngine()
-    time = datetime.now()
-    de.detect_pr_interface_changes(
-        repo_owner=GITHUB_OWNER, repo_name=GITHUB_REPO, pr_number=PR_NUMBER
-    )
-    print(datetime.now() - time)
+    # os.environ["OPENAI_API_KEY"] = (
+    #     "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"
+    # )
+    # os.environ["MODEL"] = "gpt-4o-mini"
+    crew = DetectionCrew()
+    crew.detect(repo_owner="sms2sakthivel", repo_name="user-manager", pr_number=1)
+    # uvicorn.run(app, host="0.0.0.0", port=8001)
