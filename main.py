@@ -8,7 +8,7 @@ from datetime import datetime
 from adaptutils.githubutils import GitHubApp
 from detection_engine.workflow import DetectionCrew
 
-load_dotenv(".env", override=True)
+load_dotenv("./.env", override=True)
 
 # if __name__ == "__main__":
 #     os.environ["OPENAI_API_KEY"] = (
@@ -55,10 +55,10 @@ load_dotenv(".env", override=True)
 
 
 if __name__ == "__main__":
-    # os.environ["OPENAI_API_KEY"] = (
-    #     "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"
-    # )
-    # os.environ["MODEL"] = "gpt-4o-mini"
+    load_dotenv(
+        "/Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/ADAPT/.env",
+        override=True,
+    )
     crew = DetectionCrew()
     crew.detect(repo_owner="sms2sakthivel", repo_name="user-manager", pr_number=1)
     # uvicorn.run(app, host="0.0.0.0", port=8001)

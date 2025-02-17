@@ -41,7 +41,7 @@ class DetectionCrew:
 
     def detect(self, repo_owner: str, repo_name: str, pr_number: int) -> str:
         de = DetectionEngine()
-        pr_diff, base_source_code = de.detect_pr_interface_changes(
+        pr_diff, base_source_code = de.get_pr_diff_and_base_branch_source(
             repo_owner, repo_name, pr_number
         )
         inputs = {
