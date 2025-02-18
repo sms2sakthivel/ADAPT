@@ -1,8 +1,13 @@
 import os
 import requests
 import pprint
+import json
+from typing import Tuple
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 
 from adaptutils.githubutils import GitHubApp
+from detection_engine.model import GitHubPRAnalysisOutput, AffectedEndpoint
 
 
 class DetectionEngine:
@@ -23,6 +28,8 @@ class DetectionEngine:
             pr.base.ref,
             include_extensions=[".go", ".project.json"],
         )
+        print(pr.base.ref)
+        print(pr.base.sha)
         # Step 3: Get the pull request diff
         diff = self.github_app.get_pr_diff_from_diff_url(pr.diff_url)
 
@@ -42,6 +49,68 @@ class DetectionEngine:
         diff_str += diff
         return base_branch_source_code, diff_str
     
+    def validate_data(self, data: str) -> Tuple[bool, str]:
+        try:
+            self.data = GitHubPRAnalysisOutput.model_validate_json(data)
+        except Exception as e:
+            return False, f"Validation Error: {e}"
+        return True, None
+    
+    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, pr_no: str):
+        mutation = gql("""
+            mutation NotifyAffectedEndpoints($url: String!, $method: String!, $changeType: String!,
+                                            $description: String!, $reason: String!, $originUniqueID: String!) {
+                notifyAffectedEndpoints(
+                    url: $url
+                    method: $method
+                    changeType: $changeType
+                    description: $description
+                    reason: $reason
+                    changeOrigin: "githubpr"
+                    originUniqueID: $originUniqueID
+                ) {
+                    id
+                }
+            }
+        """)
+
+        # Define variables for the mutation
+        variables = {
+            "url": affected_endpoint.endpoint,
+            "method": affected_endpoint.methods.method,
+            "changeType": change_type,
+            "description": affected_endpoint.description,
+            "reason": str(affected_endpoint.reasoning),
+            "originUniqueID": str(pr_no)
+        }
+        return mutation, variables
+    
+    def notify(self, data: str):
+        ok, error = self.validate_data(data)
+        if not ok:
+            return ok, error
+        service_url = os.environ["SERVICE_URL"]
+        url = f"{service_url}/graphql"
+        print(f"URL: {url}")
+        # Setup transport for the client
+        transport = RequestsHTTPTransport(url=url, verify=False)
+        # Create the GraphQL client
+        client = Client(transport=transport, fetch_schema_from_transport=True)
+        sample_payload = "{\"query\":\"query{\\n  repository(id:1) {\\n    id\\n    url\\n    repo_branches{\\n      id\\n      branch\\n      included_extensions\\n      status\\n      services {\\n        id\\n        port\\n        exposed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n      clients {\\n       id\\n        consumed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n    }\\n  }\\n}\"}"
+        print(f"Sample Payload : {sample_payload}")
+        for changes in self.data.analysis_summary.breaking_changes:
+            for affected_endpoint in changes.affected_endpoint:
+                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.data.pr_id)
+                response = client.execute(mutation, variable_values=variables)
+                print(f"Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
+            
+        for changes in self.data.analysis_summary.non_breaking_changes:
+            for affected_endpoint in changes.affected_endpoint:
+                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "nonbreaking", self.data.pr_id)
+                response = client.execute(mutation, variable_values=variables)
+                print(f"Non Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
+        return True, None
+
     def test_connectivity(self):
         service_url = os.environ["SERVICE_URL"]
         url = f"{service_url}/graphql"

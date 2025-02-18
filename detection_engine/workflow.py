@@ -60,7 +60,10 @@ class DetectionCrew:
         results = self.detection_crew.kickoff(inputs=inputs)
         print(results.json)
 
-        de.test_connectivity()
+        ok, error = de.notify(results.json)
+        if not ok:
+            print(error)
+            return ok, error
 
         # Step 2.3: Validate the Agent output and Onboard the Repository
         # meta_data = ProjectDataModel(repository_url=repository, branch_name=branch)

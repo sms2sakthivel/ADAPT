@@ -20,12 +20,16 @@ detection_system_prompt = {
                 "     8. Increased timeouts or reduced resource limits (e.g., rate limits, memory thresholds).",
                 "     9. Silent deprecations or internal functionality changes that affect clients.",
                 "     10. Reduced scope, permissions, or functionality (e.g., restricting access to certain endpoints).",
-                "3. **Grouping of Changes**: If changes span multiple files but contribute to a **single** breaking or non-breaking change (e.g., an endpoint update or removal involving multiple related files), **group them** together under a single change entry in the output. Do not list them as separate changes.",
-                "4. **Reasoning**: Provide clear, systematic reasoning using Chain of Thought for each classification decision, explaining why the change is breaking or non-breaking based on the criteria.",
-                "5. **Structured Output**: Generate a structured JSON output with the following details:",
+                "3. Filter out irrelevant changes that do not impact API behavior or structure, such as:",
+                    "1. Comments, documentation updates, and formatting changes.",
+                    "2.	Renaming of local variables or functions that do not affect API interfaces.",
+                    "3.	Internal refactoring that does not modify request/response behavior.",
+                "4. **Grouping of Changes**: If changes span multiple files but contribute to a **single** breaking or non-breaking change (e.g., an endpoint update or removal involving multiple related files), **group them** together under a single change entry in the output. Do not list them as separate changes.",
+                "5. **Reasoning**: Provide clear, systematic reasoning using Chain of Thought for each classification decision, explaining why the change is breaking or non-breaking based on the criteria.",
+                "6. **Structured Output**: Generate a structured JSON output with the following details:",
                 "   - **PR identifier**.",
                 "   - **Categorized changes** into Breaking and Non-Breaking with detailed descriptions of each change, including affected endpoints, methods, files, reasoning, and classification.",
-                "6. Ensure **precision** in identifying API changes, considering different definitions or modifications of API interfaces across various languages and frameworks.",
+                "7. Ensure **precision** in identifying API changes, considering different definitions or modifications of API interfaces across various languages and frameworks.",
             ],
             "output_schema": {
                 "pr_id": "<PR_IDENTIFIER>",
@@ -44,9 +48,6 @@ detection_system_prompt = {
                                     "reasoning": [
                                         "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
-                                    "file_path": ["<File Path in Base or PR Diff>"],
-                                    "language": ["<Programming Language>"],
-                                    "framework": ["<Framework Used>"],
                                 },
                                 {
                                     "endpoint": "<Endpoint Affected>",
@@ -58,9 +59,6 @@ detection_system_prompt = {
                                     "reasoning": [
                                         "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
-                                    "file_path": ["<File Path in Base or PR Diff>"],
-                                    "language": ["<Programming Language>"],
-                                    "framework": ["<Framework Used>"],
                                 },
                             ],
                         }
@@ -79,9 +77,6 @@ detection_system_prompt = {
                                     "reasoning": [
                                         "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
-                                    "file_path": ["<File Path in Base or PR Diff>"],
-                                    "language": ["<Programming Language>"],
-                                    "framework": ["<Framework Used>"],
                                 },
                                 {
                                     "endpoint": "<Endpoint Affected>",
@@ -93,9 +88,6 @@ detection_system_prompt = {
                                     "reasoning": [
                                         "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
-                                    "file_path": ["<File Path in Base or PR Diff>"],
-                                    "language": ["<Programming Language>"],
-                                    "framework": ["<Framework Used>"],
                                 },
                             ],
                         }

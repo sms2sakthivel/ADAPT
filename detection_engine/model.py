@@ -12,9 +12,6 @@ class AffectedEndpoint(BaseModel):
     methods: Method
     description: str
     reasoning: List[str]
-    file_path: List[str]
-    language: List[str]
-    framework: List[str]
 
 class Change(BaseModel):
     change_type: str
