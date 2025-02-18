@@ -1,4 +1,6 @@
 import os
+import requests
+import pprint
 
 from adaptutils.githubutils import GitHubApp
 
@@ -39,3 +41,17 @@ class DetectionEngine:
         diff_str += "=" * 50 + "\n"
         diff_str += diff
         return base_branch_source_code, diff_str
+    
+    def test_connectivity(self):
+        service_url = os.environ["SERVICE_URL"]
+        url = f"{service_url}/graphql"
+        print(f"URL: {url}")
+
+        payload = "{\"query\":\"query{\\n  repository(id:1) {\\n    id\\n    url\\n    repo_branches{\\n      id\\n      branch\\n      included_extensions\\n      status\\n      services {\\n        id\\n        port\\n        exposed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n      clients {\\n       id\\n        consumed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n    }\\n  }\\n}\"}"
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        response = requests.request("POST", url, data=payload, headers=headers)
+
+        pprint.pprint(response.json())

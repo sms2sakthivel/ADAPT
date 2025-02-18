@@ -7,19 +7,18 @@ class Method(BaseModel):
     description: str
 
 
-class Endpoint(BaseModel):
+class AffectedEndpoint(BaseModel):
     endpoint: str
-    methods: list[Method]
-
-
-class Change(BaseModel):
-    change_type: str
-    affected_endpoint: List[Endpoint]
+    methods: Method
     description: str
     reasoning: List[str]
     file_path: List[str]
     language: List[str]
     framework: List[str]
+
+class Change(BaseModel):
+    change_type: str
+    affected_endpoint: List[AffectedEndpoint]
 
 
 class AnalysisSummary(BaseModel):

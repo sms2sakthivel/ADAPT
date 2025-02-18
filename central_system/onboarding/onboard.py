@@ -6,7 +6,7 @@ from .agent_output_model import OnboardingDataModel, ProjectDataModel
 from central_system.templates import extract_onboarding_informations
 from .onboarding_handler import OnboardingHandler
 from central_system.database import SessionLocal
-from central_system.database.onboarding import Repository, RepoBranch, OnboardingStatus
+from central_system.database.onboarding import Repository, RepoBranch, Status
 
 from adaptutils import get_branch_source_dump
 
@@ -76,7 +76,7 @@ class OnboardingCrew:
                     result = (
                         db.query(Repository)
                         .join(RepoBranch)
-                        .filter(RepoBranch.status == OnboardingStatus.PENDING)
+                        .filter(RepoBranch.status == Status.PENDING)
                         .all()
                     )
                     for repository in result:
@@ -108,14 +108,14 @@ class OnboardingCrew:
                             ok, error = handler.onboard(results.json)
                             if not ok:
                                 print(error)
-                                repo_branch.status = OnboardingStatus.FAILED
+                                repo_branch.status = Status.FAILED
                                 db.commit()
                                 continue
 
                             print(
                                 f"Onboarding Repo: {repository.url} Branch: {repo_branch.branch} successful."
                             )
-                            repo_branch.status = OnboardingStatus.COMPLETED
+                            repo_branch.status = Status.COMPLETED
                             db.commit()
                 except Exception as e:
                     print(e)

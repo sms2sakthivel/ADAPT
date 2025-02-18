@@ -40,10 +40,27 @@ class ResourceType(PyEnum):
     REPOSITORY = "repository"
 
 
-class OnboardingStatus(PyEnum):
+class Status(PyEnum):
     PENDING = "pending"
-    COMPLETED = "completed"
     FAILED = "failed"
+    INPROGRESS = "inprogress"
+    COMPLETED = "completed"
+    UPDATED = "updated"
+
+class ChangeType(PyEnum):
+    BREAKING = "breaking"
+    NONBREAKING = "nonbreaking"
+
+class ActionType(PyEnum):
+    EMAIL = "email"
+    JIRATICKET = "jiraticket"
+    GITHUBPR = "githubpr"
+
+class ChangeOrigin(PyEnum):
+    JIRATICKET = "jiraticket"
+    GITHUBPR = "githubpr"
+    # EMIL = "email"
+    # JIRAISSUE = "jiraissue"
 
 
 class TimestampMixin:
@@ -68,7 +85,7 @@ class RepoBranch(Base, TimestampMixin):
     repository_id = Column(Integer, ForeignKey("repositories.id"))
     branch = Column(String, nullable=False)
     included_extensions = Column(JSONEncodedList, nullable=False)
-    status = Column(Enum(OnboardingStatus), nullable=False)
+    status = Column(Enum(Status), nullable=False)
     repository = relationship("Repository", back_populates="repo_branches")
     services = relationship("Service", back_populates="repo_branch")
     clients = relationship("Client", back_populates="repo_branch")
@@ -161,3 +178,37 @@ class EndpointConsumers(Base, TimestampMixin):
 #     communication_protocol_id = Column(
 #         Integer, ForeignKey("communication_protocols.id")
 #     )
+
+# Define Affected Endpoints Model
+class AffectedEndpoints(Base, TimestampMixin):
+    __tablename__ = "affected_endpoints"
+    id = Column(Integer, primary_key=True)
+    endpoint_id = Column(Integer, ForeignKey("endpoints.id"))
+    change_type = Column(Enum(ChangeType), nullable=False)
+    description = Column(String)
+    reason = Column(String)
+    status = Column(Enum(Status), nullable=False)
+    change_origin = Column(Enum(ChangeOrigin), nullable=False)
+    origin_unique_id = Column(String)
+    endpoint = relationship("Endpoints")
+
+# Define Affected Clients Model
+class AffectedClients(Base, TimestampMixin):
+    __tablename__ = "affected_clients"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+    affected_endpoint_id = Column(Integer, ForeignKey("affected_endpoints.id"))
+    healing_status = Column(Enum(Status), nullable=False)
+    client = relationship("Client")
+    affected_endpoint = relationship("AffectedEndpoints")
+
+# Define Action Items Model
+class ActionItems(Base, TimestampMixin):
+    __tablename__ = "action_items"
+    id = Column(Integer, primary_key=True)
+    affected_client_id = Column(Integer, ForeignKey("affected_clients.id"))
+    action_type = Column(Enum(ActionType), nullable=False)
+    meta_data = Column(String)
+    comments = Column(String)
+    propagation_status = Column(Enum(Status), nullable=False)
+    affected_client = relationship("AffectedClients")

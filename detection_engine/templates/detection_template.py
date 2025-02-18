@@ -36,21 +36,33 @@ detection_system_prompt = {
                             "affected_endpoint": [
                                 {
                                     "endpoint": "<Endpoint Affected>",
-                                    "methods": [
-                                        {
-                                            "method": "<HTTP Method (e.g., GET, POST)>",
-                                            "description": "<Description of method's change>",
-                                        }
+                                    "methods": {
+                                        "method": "<HTTP Method (e.g., GET, POST)>",
+                                        "description": "<Description of method's change>",
+                                    },
+                                    "description": "<Explanation of the Breaking Change>",
+                                    "reasoning": [
+                                        "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
-                                }
+                                    "file_path": ["<File Path in Base or PR Diff>"],
+                                    "language": ["<Programming Language>"],
+                                    "framework": ["<Framework Used>"],
+                                },
+                                {
+                                    "endpoint": "<Endpoint Affected>",
+                                    "methods": {
+                                        "method": "<HTTP Method (e.g., GET, POST)>",
+                                        "description": "<Description of method's change>",
+                                    },
+                                    "description": "<Explanation of the Breaking Change>",
+                                    "reasoning": [
+                                        "<Step-by-Step Reasoning Using Chain of Thought>"
+                                    ],
+                                    "file_path": ["<File Path in Base or PR Diff>"],
+                                    "language": ["<Programming Language>"],
+                                    "framework": ["<Framework Used>"],
+                                },
                             ],
-                            "description": "<Explanation of the Breaking Change>",
-                            "reasoning": [
-                                "<Step-by-Step Reasoning Using Chain of Thought>"
-                            ],
-                            "file_path": ["<File Path in Base or PR Diff>"],
-                            "language": ["<Programming Language>"],
-                            "framework": ["<Framework Used>"],
                         }
                     ],
                     "non_breaking_changes": [
@@ -59,21 +71,33 @@ detection_system_prompt = {
                             "affected_endpoint": [
                                 {
                                     "endpoint": "<Endpoint Affected>",
-                                    "methods": [
-                                        {
-                                            "method": "<HTTP Method (e.g., GET, POST)>",
-                                            "description": "<Description of method's change>",
-                                        }
+                                    "methods": {
+                                        "method": "<HTTP Method (e.g., GET, POST)>",
+                                        "description": "<Description of method's change>",
+                                    },
+                                    "description": "<Explanation of the Breaking Change>",
+                                    "reasoning": [
+                                        "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
-                                }
+                                    "file_path": ["<File Path in Base or PR Diff>"],
+                                    "language": ["<Programming Language>"],
+                                    "framework": ["<Framework Used>"],
+                                },
+                                {
+                                    "endpoint": "<Endpoint Affected>",
+                                    "methods": {
+                                        "method": "<HTTP Method (e.g., GET, POST)>",
+                                        "description": "<Description of method's change>",
+                                    },
+                                    "description": "<Explanation of the Breaking Change>",
+                                    "reasoning": [
+                                        "<Step-by-Step Reasoning Using Chain of Thought>"
+                                    ],
+                                    "file_path": ["<File Path in Base or PR Diff>"],
+                                    "language": ["<Programming Language>"],
+                                    "framework": ["<Framework Used>"],
+                                },
                             ],
-                            "description": "<Explanation of the Non-Breaking Change>",
-                            "reasoning": [
-                                "<Step-by-Step Reasoning Using Chain of Thought>"
-                            ],
-                            "file_path": ["<File Path in Base or PR Diff>"],
-                            "language": ["<Programming Language>"],
-                            "framework": ["<Framework Used>"],
                         }
                     ],
                 },

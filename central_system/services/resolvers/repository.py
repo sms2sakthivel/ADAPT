@@ -9,8 +9,12 @@ from central_system.database.onboarding import (
     Service,
     Client,
     RepoBranch,
-    OnboardingStatus,
+    Status,
     Endpoints,
+    AffectedEndpoints,
+    Status,
+    ChangeOrigin,
+    ChangeType,
 )
 
 
@@ -218,7 +222,7 @@ def resolve_onboard_repository(
                 repository_id=repository.id,
                 branch=branch,
                 included_extensions=included_extensions,
-                status=OnboardingStatus.PENDING,
+                status=Status.PENDING,
             )
             db.add(repo_branch)
             db.commit()
@@ -239,6 +243,48 @@ def resolve_onboard_repository(
         except IntegrityError as ie:
             db.rollback()
             raise Exception("Repository already exists")
+        finally:
+            db.close()
+
+
+@repository_mutation.field("notifyAffectedEndpoints")
+def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType: str, description: str, reason: str, changeOrigin: str, originUniqueID: str):
+    with SessionLocal() as db:
+        try:
+            # get the endpoint using url and method.
+            endpoint = db.query(Endpoints).filter(Endpoints.endpoint_url == url, Endpoints.method == method).first()
+            if not endpoint:
+                raise Exception("Endpoint not found")
+            affected_endpoint = db.query(AffectedEndpoints).filter(AffectedEndpoints.endpoint_id == endpoint.id, AffectedEndpoints.change_origin == ChangeOrigin(changeOrigin) ,AffectedEndpoints.origin_unique_id == originUniqueID, AffectedEndpoints.change_type == ChangeType(changeType)).first()
+            if affected_endpoint is None:
+                # insert into the affected_endpoints table
+                affected_endpoint = AffectedEndpoints(
+                    endpoint_id=endpoint.id,
+                    change_type=ChangeType(changeType),
+                    description=description,
+                    reason=reason,
+                    status = Status.PENDING,
+                    change_origin = ChangeOrigin(changeOrigin),
+                    origin_unique_id = originUniqueID
+                )
+                db.add(affected_endpoint)
+                db.commit()
+            else:
+                affected_endpoint.description = affected_endpoint.description + "\n" + description
+                affected_endpoint.reason = affected_endpoint.reason + "\n" + reason
+                affected_endpoint.status = Status.UPDATED
+                db.add(affected_endpoint)
+                db.commit()
+            return {
+                "id": affected_endpoint.id,
+                "url": affected_endpoint.endpoint.endpoint_url,
+                "method": affected_endpoint.endpoint.method,
+                "changeType": affected_endpoint.change_type,
+                "description": affected_endpoint.description,
+                "reason": affected_endpoint.reason,
+                "status": affected_endpoint.status,
+                "changeOrigin": affected_endpoint.change_origin,
+            }
         finally:
             db.close()
 

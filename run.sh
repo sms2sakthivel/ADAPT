@@ -1,0 +1,1 @@
+docker run --rm -p 8001:8001 --volume ./data:/app/data -it sms2sakthivel/adapt_central_system:latest

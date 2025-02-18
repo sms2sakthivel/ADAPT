@@ -3,7 +3,7 @@ from .onboarding import Base
 
 
 def create_db_engine():
-    engine = create_engine("sqlite:///central_system.db")
+    engine = create_engine("sqlite:///data/central_system.db")
     return engine
 
 

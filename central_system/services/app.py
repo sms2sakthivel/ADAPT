@@ -12,7 +12,7 @@ def custom_error_formatter(error, debug):
 
 # Load Schema from disk
 schema_str = load_schema_from_path(
-    "/Users/sakthivelganesan/Desktop/Workspace/MTech/Semester4/Dissertation/Implementation/ADAPT/ADAPT/central_system/services/schema/schema.gql"
+    "central_system/services/schema/schema.gql"
 )
 
 # # Create executable schema

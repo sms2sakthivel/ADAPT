@@ -32,6 +32,18 @@ type Endpoint {
     specification: String!
 }
 
+type AffectedEndpoints {
+    id: ID
+    url: String!
+    method: String!
+    changeType: String!
+    description: String!
+    reason: String!
+    changeOrigin: String!
+    originUniqueID: String!
+    status: String
+}
+
 type Query {
     repositories: [Repository]
     repository(id: ID!): Repository
@@ -41,9 +53,10 @@ type Query {
     client(id: ID!): Client
     endpoints: [Endpoint]
     endpoint(id: ID!): Endpoint
+    affectedEndpoints: [AffectedEndpoints]
 }
 
 type Mutation {
     onboardRepository(url: String!, branch: String!, included_extensions: [String]!): Repository!
-    # deleteRepository(id: ID!): Repository!
+    notifyAffectedEndpoints(url: String!, method: String!, changeType: String!, description: String!, reason: String!, changeOrigin: String!, originUniqueID: String!): AffectedEndpoints!
 }

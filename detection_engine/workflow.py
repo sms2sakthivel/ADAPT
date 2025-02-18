@@ -55,9 +55,12 @@ class DetectionCrew:
             ),
         }
 
+        print(inputs)
         # Step 2.2: Run the Crew and get the Final output
         results = self.detection_crew.kickoff(inputs=inputs)
         print(results.json)
+
+        de.test_connectivity()
 
         # Step 2.3: Validate the Agent output and Onboard the Repository
         # meta_data = ProjectDataModel(repository_url=repository, branch_name=branch)

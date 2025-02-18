@@ -1,5 +1,8 @@
 #! /bin/bash -x
 
+# Stop on error
+set -e
+
 # Log the start of the build process
 echo "Build Started for ADAPT Framework...!"
 cwd=$PWD
@@ -24,9 +27,17 @@ if [ "$1" == "centralsystem" ] || [ "$1" == "all" ]; then
     cp -r ../adaptutils .
     cp central_system/dockerfile .
     cp central_system/requirements.txt .
+    cp central_system/main.py .
 
-    # Build a Docker image tagged as centralsystem:0.0.1 and log the success message
-    docker build -t centralsystem:0.0.1 .
+    # Build a Docker image tagged as sms2sakthivel/adapt_central_system:latest and log the success message
+    IMAGE_NAME="sms2sakthivel/adapt_central_system"
+    docker build -t $IMAGE_NAME:latest .
+    # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest .
+    if [ "$2" == "push" ] || [ "$3" == "push" ] || [ "$4" == "push" ]; then
+        # Push the image if the build succeeds
+        docker push -t $IMAGE_NAME:latest .
+        # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest --push .
+    fi
     echo "Central System is built Successfully...!"
 fi
 
@@ -50,9 +61,17 @@ if [ "$1" == "detectionengine" ] || [ "$1" == "all" ]; then
     cp -r ../adaptutils .
     cp detection_engine/dockerfile .
     cp detection_engine/requirements.txt .
+    cp detection_engine/app.py .
 
-    # Build a Docker image tagged as detection_engine:0.0.1 and log the success message
-    docker build -t detection_engine:0.0.1 .
+    # Build a Docker image tagged as sms2sakthivel/adapt_detection_engine:latest and log the success message
+    IMAGE_NAME="sms2sakthivel/adapt_detection_engine"
+    docker build -t $IMAGE_NAME:latest .
+    # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest .
+    if [ "$2" == "push" ] || [ "$3" == "push" ] || [ "$4" == "push" ]; then
+        # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest --push .
+        # Push the image if the build succeeds
+        docker push "$IMAGE_NAME:latest"
+    fi
     echo "Detection Engine is built Successfully...!"
 fi
 
@@ -76,11 +95,21 @@ if [ "$1" == "propagationengine" ] || [ "$1" == "all" ]; then
     cp -r ../adaptutils .
     cp propagation_engine/dockerfile .
     cp propagation_engine/requirements.txt .
+    cp propagation_engine/app.py .
 
-    # Build a Docker image tagged as propagation_engine:0.0.1 and log the success message
-    docker build -t propagation_engine:0.0.1 .
+    # Build a Docker image tagged as sms2sakthivel/adapt_propagation_engine:latest and log the success message
+    IMAGE_NAME="sms2sakthivel/adapt_propagation_engine"
+    docker build -t $IMAGE_NAME:latest .
+    # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest .
+    if [ "$2" == "push" ] || [ "$3" == "push" ] || [ "$4" == "push" ]; then
+        # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest --push .
+        # Push the image if the build succeeds
+        docker push "$IMAGE_NAME:latest"
+    fi
     echo "Propagation Engine is built Successfully...!"
 fi
 
+cd $cwd
+rm -rf build
 # Log the completion of the build process
 echo "Build Completed for ADAPT Framework...!"
