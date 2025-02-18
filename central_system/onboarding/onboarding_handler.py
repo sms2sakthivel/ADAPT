@@ -1,5 +1,6 @@
 from typing import Tuple, Optional
 from sqlalchemy import and_
+import json
 
 from central_system.database import engine
 from .agent_output_model import OnboardingDataModel, ProjectDataModel
@@ -100,6 +101,7 @@ class OnboardingHandler:
                                     endpoint_url=exposed_endpoint.endpoint,
                                     method=method.method,
                                     description=method.description,
+                                    specifications=json.dumps(method.specification),
                                 )
                             )
                             db.commit()

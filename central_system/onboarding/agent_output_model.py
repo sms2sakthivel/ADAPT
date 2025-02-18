@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class Method(BaseModel):
     method: str
     description: str
+    specification: dict
 
 
 class ExposedEndpoint(BaseModel):
