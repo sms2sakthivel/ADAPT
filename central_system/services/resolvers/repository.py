@@ -47,20 +47,6 @@ def resolve_repositories(_, info, page=1, size=100):
                 .limit(size)
                 .all()
             )
-            # result = (
-            #     db.query(Repository)
-            #     .options(
-            #         joinedload(Repository.repo_branches)
-            #         .joinedload(RepoBranch.services)
-            #         .joinedload(Service.endpoints),
-            #         joinedload(Repository.repo_branches)
-            #         .joinedload(RepoBranch.clients)
-            #         .joinedload(Client.consumed_endpoints),
-            #     )
-            #     .offset(start)
-            #     .limit(size)
-            #     .all()
-            # )
             # Format the result
             print(result)
             repositories = []

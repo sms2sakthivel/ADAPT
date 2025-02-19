@@ -1,5 +1,4 @@
-from adaptutils.githubutils import GitHubApp
-from detection_engine.workflow import DetectionCrew
+from detection_engine.github.crew import GithubDetectionCrew
 from dotenv import load_dotenv
 import os
 
@@ -14,5 +13,5 @@ if __name__ == "__main__":
 
     print(f"Processing PR #{pr_number} in {repo_owner}/{repo_name}")
     
-    crew = DetectionCrew()
+    crew = GithubDetectionCrew()
     crew.detect(repo_owner=repo_owner, repo_name=repo_name, pr_number=pr_number)

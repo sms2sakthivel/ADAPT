@@ -2,10 +2,10 @@ import json
 from crewai import Crew, Agent, Task
 from detection_engine.templates import detection_system_prompt
 from detection_engine.model import GitHubPRAnalysisOutput
-from detection_engine.detection_engine import DetectionEngine
+from detection_engine.github.engine import GithubDetectionEngine
 
 
-class DetectionCrew:
+class GithubDetectionCrew:
     def __init__(self):
         self.pr_reviewer_agent: Agent = self.get_pr_reviewer_agent()
         self.pr_review_task: Task = self.get_pr_review_task()
@@ -40,7 +40,7 @@ class DetectionCrew:
         )
 
     def detect(self, repo_owner: str, repo_name: str, pr_number: int) -> str:
-        de = DetectionEngine()
+        de = GithubDetectionEngine()
         pr_diff, base_source_code = de.get_pr_diff_and_base_branch_source(
             repo_owner, repo_name, pr_number
         )
@@ -64,15 +64,6 @@ class DetectionCrew:
         if not ok:
             print(error)
             return ok, error
-
-        # Step 2.3: Validate the Agent output and Onboard the Repository
-        # meta_data = ProjectDataModel(repository_url=repository, branch_name=branch)
-        # handler = OnboardingHandler(meta_data)
-
-        # ok, error = handler.onboard(results.json)
-        # if not ok:
-        #     print(error)
-        #     return ok, error
 
         print(
             f"Completed Detection Task For: {repo_owner}/{repo_name} PR: {pr_number} successful."

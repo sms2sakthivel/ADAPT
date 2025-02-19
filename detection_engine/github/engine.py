@@ -1,7 +1,4 @@
 import os
-import requests
-import pprint
-import json
 from typing import Tuple
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
@@ -10,7 +7,7 @@ from adaptutils.githubutils import GitHubApp
 from detection_engine.model import GitHubPRAnalysisOutput, AffectedEndpoint
 
 
-class DetectionEngine:
+class GithubDetectionEngine:
     def __init__(self):
         self.github_app = GitHubApp(auth_token=os.getenv("GITHUB_API_TOKEN"))
 
@@ -96,8 +93,6 @@ class DetectionEngine:
         transport = RequestsHTTPTransport(url=url, verify=False)
         # Create the GraphQL client
         client = Client(transport=transport, fetch_schema_from_transport=True)
-        sample_payload = "{\"query\":\"query{\\n  repository(id:1) {\\n    id\\n    url\\n    repo_branches{\\n      id\\n      branch\\n      included_extensions\\n      status\\n      services {\\n        id\\n        port\\n        exposed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n      clients {\\n       id\\n        consumed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n    }\\n  }\\n}\"}"
-        print(f"Sample Payload : {sample_payload}")
         for changes in self.data.analysis_summary.breaking_changes:
             for affected_endpoint in changes.affected_endpoint:
                 mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.data.pr_id)
@@ -110,17 +105,3 @@ class DetectionEngine:
                 response = client.execute(mutation, variable_values=variables)
                 print(f"Non Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
         return True, None
-
-    def test_connectivity(self):
-        service_url = os.environ["SERVICE_URL"]
-        url = f"{service_url}/graphql"
-        print(f"URL: {url}")
-
-        payload = "{\"query\":\"query{\\n  repository(id:1) {\\n    id\\n    url\\n    repo_branches{\\n      id\\n      branch\\n      included_extensions\\n      status\\n      services {\\n        id\\n        port\\n        exposed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n      clients {\\n       id\\n        consumed_endpoints{\\n          url\\n          method\\n        }\\n      }\\n    }\\n  }\\n}\"}"
-        headers = {
-            "Content-Type": "application/json"
-        }
-
-        response = requests.request("POST", url, data=payload, headers=headers)
-
-        pprint.pprint(response.json())

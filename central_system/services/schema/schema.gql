@@ -52,7 +52,7 @@ type Query {
     clients: [Client]
     client(id: ID!): Client
     endpoints: [Endpoint]
-    endpoint(id: ID!): Endpoint
+    endpoint(url: String, method: String): [Endpoint]
     affectedEndpoints: [AffectedEndpoints]
 }
 

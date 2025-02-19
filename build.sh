@@ -42,7 +42,7 @@ if [ "$1" == "centralsystem" ] || [ "$1" == "all" ]; then
 fi
 
 # Check if the first argument is detectionengine or not, and if it's the case or if the first argument is all.
-if [ "$1" == "detectionengine" ] || [ "$1" == "all" ]; then
+if [ "$1" == "detectionengine.github" ] || [ "$1" == "all" ]; then
     # Log the start of building the detection engine
     echo "Building Detection Engine"
 
@@ -59,12 +59,12 @@ if [ "$1" == "detectionengine" ] || [ "$1" == "all" ]; then
     # Copy the necessary files for the detection engine into the build directory
     cp -r ../detection_engine .
     cp -r ../adaptutils .
-    cp detection_engine/dockerfile .
+    cp detection_engine/github/dockerfile .
     cp detection_engine/requirements.txt .
-    cp detection_engine/app.py .
+    cp detection_engine/github/app.py .
 
     # Build a Docker image tagged as sms2sakthivel/adapt_detection_engine:latest and log the success message
-    IMAGE_NAME="sms2sakthivel/adapt_detection_engine"
+    IMAGE_NAME="sms2sakthivel/adapt_detection_engine_github"
     docker build -t $IMAGE_NAME:latest .
     # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest .
     if [ "$2" == "push" ] || [ "$3" == "push" ] || [ "$4" == "push" ]; then
@@ -76,7 +76,7 @@ if [ "$1" == "detectionengine" ] || [ "$1" == "all" ]; then
 fi
 
 # Check if the first argument is detectionengine or not, and if it's the case or if the first argument is all.
-if [ "$1" == "detectionengineservice" ] || [ "$1" == "all" ]; then
+if [ "$1" == "detectionengine.jira" ] || [ "$1" == "all" ]; then
     # Log the start of building the detection engine
     echo "Building Detection Engine Service"
 
@@ -93,12 +93,13 @@ if [ "$1" == "detectionengineservice" ] || [ "$1" == "all" ]; then
     # Copy the necessary files for the detection engine into the build directory
     cp -r ../detection_engine .
     cp -r ../adaptutils .
-    cp detection_engine/dockerfile .
+    cp detection_engine/jira/dockerfile .
     cp detection_engine/requirements.txt .
-    cp detection_engine/app.py .
+    cp detection_engine/jira/app.py .
+    cp detection_engine/.env .
 
     # Build a Docker image tagged as sms2sakthivel/adapt_detection_engine:latest and log the success message
-    IMAGE_NAME="sms2sakthivel/adapt_detection_engine"
+    IMAGE_NAME="sms2sakthivel/adapt_detection_engine_jira"
     docker build -t $IMAGE_NAME:latest .
     # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_NAME:latest .
     if [ "$2" == "push" ] || [ "$3" == "push" ] || [ "$4" == "push" ]; then
