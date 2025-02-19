@@ -11,7 +11,8 @@ app = FastAPI()
 @app.post("/jira-webhook")
 async def jira_webhook(request: Request):
     data = await request.json()
-    print("Received Jira Event:", data)
+    # print("Received Jira Event:", data)
+    print("Received Jira Event")
     crew = JIRADetectionCrew()
-    crew.detect(data)
-    return {"message": "Event received"}
+    _, status = crew.detect(data)
+    return {"message": status}

@@ -53,7 +53,6 @@ class JIRADetectionEngine:
         query = gql("""
             query GetEndpointDetails($url: String!, $method: String!) {
                 endpoint(url: $url, method: $method) {
-                    id
                     url
                     method
                     description
@@ -130,12 +129,12 @@ class JIRADetectionEngine:
             query, variables = self.construct_endpoint_query(url=endpoint.endpoint,method=endpoint.methods.method)
             response = client.execute(query, variable_values=variables)
             if response['endpoint']:
-                print(f"Specification Identified for endpiont {endpoint} and method {endpoint.methods.method}")
+                print(f"Specification Identified for endpiont {endpoint.endpoint} and method {endpoint.methods.method}")
                 if endpoint.endpoint not in existing_specification:
                     existing_specification[endpoint.endpoint] = []
                 existing_specification[endpoint.endpoint].extend(response['endpoint'])
             else:
-                print(f"Specification not found for endpiont {endpoint} and method {endpoint.methods.method}")
+                print(f"Specification not found for endpiont {endpoint.endpoint} and method {endpoint.methods.method}")
         return existing_specification
 
     def notify(self, data: str):

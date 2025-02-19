@@ -74,6 +74,9 @@ class JIRADetectionCrew:
     def detect(self, data: dict):
         de = JIRADetectionEngine()
         jira_data, jira_data_dict = de.extract_jira_data(data)
+        if jira_data_dict["status"] not in ["Done", "Completed", "Accepted"]:
+            print(f"Event Skipped for status {jira_data_dict['status']}")
+            return True, "SKIPPED"
         inputs = {
             "jira_ticket_data": json.dumps(jira_data),
             "output_schema": json.dumps(
@@ -106,124 +109,3 @@ class JIRADetectionCrew:
             f"Completed Detection Task For: {jira_data_dict['project']['name']} Ticket ID: {jira_data_dict['ticket']['id']} successful."
         )
         return True, "Success"
-
-# def fetch_existing_specifications(identified_endpoints: List[EndpointWithSpec]) -> Dict[str, Any]:
-#     """
-#     Fetch existing API specifications from the database for the given endpoints.
-#     """
-#     existing_specs = {}
-#     for endpoint in identified_endpoints:
-#         # Replace with actual database retrieval logic
-#         existing_specs[endpoint.endpoint] = {
-#             "methods": ["GET", "POST"],  # Example data
-#             "request_schema": {"example": "Existing request schema"},
-#             "response_schema": {"example": "Existing response schema"}
-#         }
-#     return existing_specs
-
-# # Agent 1: Extract API details from JIRA ticket
-# jira_extraction_agent = Agent(
-#     name="JIRA API Extraction Agent",
-#     role="An assistant that extracts discussed API endpoints from JIRA tickets.",
-#     goal="Identify API endpoints mentioned in a given JIRA ticket.",
-#     backstory="An expert in analyzing JIRA tickets to extract relevant API discussions.",
-#     allow_delegation=False,
-#     verbose=True
-# )
-
-# # Agent 2: Compare and analyze API changes
-# api_analysis_agent = Agent(
-#     name="API Change Analysis Agent",
-#     role="An analyst comparing proposed API changes with existing specifications.",
-#     goal="Determine the nature of API changes and their approval status. Use the Existing Specifications of the endpoints for comparision. Existing Sepcification : {existing_specification}",
-#     backstory="A specialist in assessing API modifications for potential impacts.",
-#     allow_delegation=False,
-#     verbose=True
-# )
-
-# # Callback function to fetch existing specifications
-# def fetch_spec_callback(output: TaskOutput) -> ExtractionOutput:
-#     existing_specs = fetch_existing_specifications(output.to_dict()["identified_endpoints"])
-#     extraction_output_with_specs = output.to_dict()
-#     extraction_output_with_specs['existing_specifications'] = existing_specs
-#     if output.json_dict:
-#         output.json_dict['existing_specifications']= existing_specs
-#     elif output.pydantic:
-#         output.pydantic.existing_specifications = existing_specs
-#     print(extraction_output_with_specs)
-#     return ExtractionOutput(**extraction_output_with_specs)
-
-# # Task 1: Extract API endpoints from JIRA ticket
-# extract_api_task = Task(
-#     description="Analyze the JIRA ticket to extract discussed API endpoints.",
-#     expected_output="A structured JSON with identified API endpoints.",
-#     agent=jira_extraction_agent,
-#     output_pydantic=ExtractionOutput,
-# )
-
-# # Task 2: Compare extracted API spec with existing spec
-# compare_api_task = Task(
-#     description="Compare the extracted API details with existing specifications to identify changes.",
-#     expected_output="A JSON report detailing breaking/non-breaking changes and approval status.",
-#     agent=api_analysis_agent,
-#     output_pydantic=ComparisonOutput
-# )
-
-# # Define the crew
-# jira_api_review_crew = Crew(
-#     agents=[jira_extraction_agent, api_analysis_agent],
-#     tasks=[extract_api_task, compare_api_task],
-#     verbose=True
-# )
-
-# Run the workflow
-
-# Step 1: Run Extraction Task
-# extraction_crew = Crew(
-#     agents=[jira_extraction_agent],
-#     tasks=[extract_api_task],
-#     verbose=True
-# )
-
-# Run the extraction process
-# extraction_result = extraction_crew.kickoff()
-# extracted_output = extraction_result.pydantic
-
-# print(extracted_output.model_dump_json(indent=4))
-
-# Step 2: Fetch existing API specifications
-# existing_specs = fetch_existing_specifications(extracted_output.identified_endpoints)
-
-# # Step 3: Prepare input for Comparison Task
-# comparison_input = ComparisonInput(
-#     ticket_id=extracted_output.ticket_id,
-#     identified_endpoints=extracted_output.identified_endpoints,
-#     existing_specifications=existing_specs
-# )
-
-# Step 4: Run Comparison Task
-# comparison_crew = Crew(
-#     agents=[api_analysis_agent],
-#     tasks=[compare_api_task],
-#     verbose=True
-# )
-
-# # Manually set the task context before running it
-# compare_api_task.context = [comparison_input]
-
-# inputs = {"existing_specification": existing_specs}
-
-# Run the comparison process
-# comparison_result = comparison_crew.kickoff(inputs=inputs)
-# final_output = comparison_result.pydantic
-
-# Print the final analysis report
-# print(final_output)
-
-
-
-# Run the workflow
-# load_dotenv("./.env", override=True)
-# track_crewai(project_name="jira_detection")
-# result = jira_api_review_crew.kickoff()
-# print(result.pydantic)
