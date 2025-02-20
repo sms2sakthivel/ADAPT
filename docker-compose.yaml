@@ -1,0 +1,40 @@
+version: '3.8'
+name: ADAPT
+
+services:
+  central_system:
+    image: sms2sakthivel/adapt_central_system:latest
+    container_name: central_system
+    restart: unless-stopped
+    networks:
+      - adapt-network
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "9501:9501"
+
+  jira_detection_engine:
+    image: sms2sakthivel/adapt_detection_engine_jira:latest
+    container_name: detection_engine_jira
+    restart: unless-stopped
+    depends_on:
+      - central_system
+    networks:
+      - adapt-network
+    ports:
+      - "9502:9502"
+
+  propagation_engine:
+    image: sms2sakthivel/adapt_propagation_engine:latest
+    container_name: propagation_engine
+    restart: unless-stopped
+    depends_on:
+      - central_system
+    networks:
+      - adapt-network
+
+networks:
+  adapt-network:
+
+volumes:
+  data:
