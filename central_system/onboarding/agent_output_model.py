@@ -18,13 +18,21 @@ class ConsumedEndpoint(BaseModel):
     port_config: str
     port: int
 
+class Branch(BaseModel):
+    project_name: str
+    guid: str
+    description: str
+    jira_instance_url: str
+    jira_project_key: str
+
 
 class OnboardingDataModel(BaseModel):
     exposed_endpoints: list[ExposedEndpoint]
     consumed_endpoints: list[ConsumedEndpoint]
     is_swagger_supported: bool
     swagger_endpoint: str
-    project_name: str
+    repository: Branch
+    branch: Branch
     port: str
     communication_protocol: str
     is_tls_supported: bool

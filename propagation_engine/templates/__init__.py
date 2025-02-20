@@ -1,0 +1,1 @@
+from .detection_template import detection_system_prompt

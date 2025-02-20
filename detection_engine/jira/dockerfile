@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-EXPOSE 9501
+EXPOSE 9502
 
 # Specify the command to run the application (adjust as needed)
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9501"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9502"]

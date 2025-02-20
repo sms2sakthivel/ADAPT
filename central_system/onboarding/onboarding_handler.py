@@ -53,6 +53,21 @@ class OnboardingHandler:
                         f"Branch {self.meta_data.branch_name} not found in the database."
                     )
 
+                # Step 1.1: Update Repository
+                repository.name = self.data.repository.project_name
+                repository.guid = self.data.repository.guid
+                repository.jira_instance_url = self.data.repository.jira_instance_url
+                repository.jira_project_key = self.data.repository.jira_project_key
+
+                repository_branch.name = self.data.branch.project_name
+                repository_branch.guid = self.data.branch.guid
+                repository_branch.jira_instance_url = self.data.branch.jira_instance_url
+                repository_branch.jira_project_key = self.data.branch.jira_project_key
+
+                db.add(repository)
+                db.add(repository_branch)
+                db.commit()
+
                 # Step 2: Update Services Table
                 service: Optional[Service] = (
                     db.query(Service)

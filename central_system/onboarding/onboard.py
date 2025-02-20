@@ -97,6 +97,7 @@ class OnboardingCrew:
 
                             # Step 2.2: Run the Crew and get the Final output
                             results = self.onboarding_crew.kickoff(inputs=inputs)
+                            print(f"Onboarding Crew Completed...!")
 
                             # Step 2.3: Validate the Agent output and Onboard the Repository
                             meta_data = ProjectDataModel(

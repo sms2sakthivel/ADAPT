@@ -22,7 +22,7 @@ def run_analysis_demon():
 def run_onboarding_server():
     print(f"Server Process (PID: {os.getpid()}) starting...")
     load_dotenv("/app/data/.env", override=True)
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=9501)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from detection_engine.model import GitHubPRAnalysisOutput
 from detection_engine.github.engine import GithubDetectionEngine
 
 
-class GithubDetectionCrew:
+class GithubPropagationCrew:
     def __init__(self):
         self.pr_reviewer_agent: Agent = self.get_pr_reviewer_agent()
         self.pr_review_task: Task = self.get_pr_review_task()
@@ -39,7 +39,7 @@ class GithubDetectionCrew:
             verbose=True,
         )
 
-    def detect(self, repo_owner: str, repo_name: str, pr_number: int, pr_url: str) -> str:
+    def detect(self, repo_owner: str, repo_name: str, pr_number: int) -> str:
         de = GithubDetectionEngine()
         pr_diff, base_source_code = de.get_pr_diff_and_base_branch_source(
             repo_owner, repo_name, pr_number
@@ -60,7 +60,7 @@ class GithubDetectionCrew:
         results = self.detection_crew.kickoff(inputs=inputs)
         print(results.json)
 
-        ok, error = de.notify(results.json, pr_url)
+        ok, error = de.notify(results.json)
         if not ok:
             print(error)
             return ok, error

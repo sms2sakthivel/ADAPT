@@ -1,6 +1,10 @@
 type Repository {
     id: ID
     url: String
+    name: String
+    guid: String
+    jira_instance_url: String
+    jira_project_key: String
     repo_branches: [RepoBranch]
 }
 
@@ -9,6 +13,10 @@ type RepoBranch {
     branch: String!
     included_extensions: [String]!
     status: String
+    name: String
+    guid: String
+    jira_instance_url: String
+    jira_project_key: String
     services: [Service]!
     clients: [Client]!
 }
@@ -32,7 +40,7 @@ type Endpoint {
     specification: String!
 }
 
-type AffectedEndpoints {
+type AffectedEndpoint {
     id: ID
     url: String!
     method: String!
@@ -41,7 +49,45 @@ type AffectedEndpoints {
     reason: String!
     changeOrigin: String!
     originUniqueID: String!
+    changeOriginURL: String!
     status: String
+}
+type GithubProject{
+    repository: String!
+    branch: String!
+    prId: String
+    prUrl: String
+}
+
+type JiraProject {
+    url: String!
+    id: String!
+    ticketId: String
+    ticketUrl: String
+}
+
+type AffectedClient{
+    name: String!
+    guid: String!
+    githubProject: GithubProject
+    jiraProject: JiraProject
+}
+
+type OriginatingService{
+    name: String!
+    guid: String!
+    githubProject: GithubProject
+    jiraProject: JiraProject
+    affectedEndpoint: AffectedEndpoint!
+}
+
+type ActionItem {
+    id: ID!
+    type: String!
+    comments: String
+    propagationStatus: String!
+    originatingService: OriginatingService!
+    affectedClient: AffectedClient!
 }
 
 type Query {
@@ -53,10 +99,12 @@ type Query {
     client(id: ID!): Client
     endpoints: [Endpoint]
     endpoint(url: String, method: String): [Endpoint]
-    affectedEndpoints: [AffectedEndpoints]
+    affectedEndpoints: [AffectedEndpoint]
+    actionItems: [ActionItem]
 }
 
 type Mutation {
     onboardRepository(url: String!, branch: String!, included_extensions: [String]!): Repository!
-    notifyAffectedEndpoints(url: String!, method: String!, changeType: String!, description: String!, reason: String!, changeOrigin: String!, originUniqueID: String!): AffectedEndpoints!
+    notifyAffectedEndpoints(url: String!, method: String!, changeType: String!, description: String!, reason: String!, changeOrigin: String!, originUniqueID: String!, changeOriginURL: String!): AffectedEndpoint!
+    # updateActionItem(id: ID!, actionItem: ActionItem!) ActionItem
 }

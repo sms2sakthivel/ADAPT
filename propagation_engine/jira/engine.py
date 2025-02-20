@@ -83,10 +83,10 @@ class JIRADetectionEngine:
             return False, f"Validation Error: {e}"
         return True, None
 
-    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, jira_ticket_id: str, jira_ticket_url: str):
+    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, jira_ticket_id: str):
         mutation = gql("""
             mutation NotifyAffectedEndpoints($url: String!, $method: String!, $changeType: String!,
-                                            $description: String!, $reason: String!, $originUniqueID: String!, $changeOriginURL: String!) {
+                                            $description: String!, $reason: String!, $originUniqueID: String!) {
                 notifyAffectedEndpoints(
                     url: $url
                     method: $method
@@ -95,7 +95,6 @@ class JIRADetectionEngine:
                     reason: $reason
                     changeOrigin: "jiraticket"
                     originUniqueID: $originUniqueID
-                    changeOriginURL: $changeOriginURL
                 ) {
                     id
                 }
@@ -109,8 +108,7 @@ class JIRADetectionEngine:
             "changeType": change_type,
             "description": affected_endpoint.description,
             "reason": str(affected_endpoint.reasoning),
-            "originUniqueID": str(jira_ticket_id),
-            "changeOriginURL": jira_ticket_url
+            "originUniqueID": str(jira_ticket_id)
         }
         return mutation, variables
     
@@ -139,7 +137,7 @@ class JIRADetectionEngine:
                 print(f"Specification not found for endpiont {endpoint.endpoint} and method {endpoint.methods.method}")
         return existing_specification
 
-    def notify(self, data: str, ticket_url: str):
+    def notify(self, data: str):
         ok, error = self.validate_analysis_data(data)
         if not ok:
             return ok, error
@@ -152,13 +150,13 @@ class JIRADetectionEngine:
         client = Client(transport=transport, fetch_schema_from_transport=True)
         for changes in self.analysis_data.analysis_summary.breaking_changes:
             for affected_endpoint in changes.affected_endpoint:
-                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.analysis_data.ticket_id, ticket_url)
+                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.analysis_data.ticket_id)
                 response = client.execute(mutation, variable_values=variables)
                 print(f"Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
             
         for changes in self.analysis_data.analysis_summary.non_breaking_changes:
             for affected_endpoint in changes.affected_endpoint:
-                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "nonbreaking", self.analysis_data.ticket_id,ticket_url)
+                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "nonbreaking", self.analysis_data.ticket_id)
                 response = client.execute(mutation, variable_values=variables)
                 print(f"Non Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
         return True, None

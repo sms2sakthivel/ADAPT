@@ -8,6 +8,7 @@ from sqlalchemy import (
     Enum,
     Text,
 )
+from sqlalchemy.inspection import inspect
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -20,6 +21,13 @@ import json
 # Create a base class for your models
 Base = declarative_base()
 
+
+class BaseEnum(PyEnum):
+    def __str__(self):
+        return f"'{self.value}'"
+
+    def __repr__(self):
+        return self.__str__()
 
 class JSONEncodedList(TypeDecorator):
     impl = Text
@@ -36,27 +44,27 @@ class JSONEncodedList(TypeDecorator):
 
 
 # Create Enum for different types of Resources in table. I need to have the type of the job in the jobs table
-class ResourceType(PyEnum):
+class ResourceType(BaseEnum):
     REPOSITORY = "repository"
 
 
-class Status(PyEnum):
+class Status(BaseEnum):
     PENDING = "pending"
     FAILED = "failed"
     INPROGRESS = "inprogress"
     COMPLETED = "completed"
     UPDATED = "updated"
 
-class ChangeType(PyEnum):
+class ChangeType(BaseEnum):
     BREAKING = "breaking"
     NONBREAKING = "nonbreaking"
 
-class ActionType(PyEnum):
+class ActionType(BaseEnum):
     EMAIL = "email"
     JIRATICKET = "jiraticket"
     GITHUBPR = "githubpr"
 
-class ChangeOrigin(PyEnum):
+class ChangeOrigin(BaseEnum):
     JIRATICKET = "jiraticket"
     GITHUBPR = "githubpr"
     # EMIL = "email"
@@ -70,12 +78,48 @@ class TimestampMixin:
         default=datetime.datetime.now(datetime.timezone.utc),
         onupdate=datetime.datetime.now(datetime.timezone.utc),
     )
+    # def to_dict(self):
+    #     return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+    def to_dict(self, recurse=False, backref=None):
+        """
+        Convert the SQLAlchemy model instance into a dictionary, including relationships.
+
+        :param recurse: Whether to recursively include relationships.
+        :param backref: Used internally to prevent infinite recursion.
+        :return: A dictionary representation of the model instance.
+        """
+        result = {}
+        mapper = inspect(self).mapper
+
+        # Include columns
+        for column in mapper.columns:
+            result[column.key] = getattr(self, column.key)
+
+        # Include relationships
+        if recurse:
+            for name, relation in mapper.relationships.items():
+                # Prevent infinite recursion
+                if backref and relation.back_populates == backref:
+                    continue
+
+                related_obj = getattr(self, name)
+                if related_obj is not None:
+                    if relation.uselist:
+                        result[name] = [item.to_dict(recurse=False, backref=relation.back_populates) for item in related_obj]
+                    else:
+                        result[name] = related_obj.to_dict(recurse=False, backref=relation.back_populates)
+
+        return result
 
 
 class Repository(Base, TimestampMixin):
     __tablename__ = "repositories"
     id = Column(Integer, primary_key=True)
     url = Column(String, unique=True, nullable=False)
+    guid = Column(String, unique=True)
+    jira_instance_url = Column(String)
+    jira_project_key = Column(String)
+    name = Column(String)
     repo_branches = relationship("RepoBranch", back_populates="repository")
 
 
@@ -86,6 +130,10 @@ class RepoBranch(Base, TimestampMixin):
     branch = Column(String, nullable=False)
     included_extensions = Column(JSONEncodedList, nullable=False)
     status = Column(Enum(Status), nullable=False)
+    guid = Column(String, unique=True)
+    jira_instance_url = Column(String)
+    jira_project_key = Column(String)
+    name = Column(String)
     repository = relationship("Repository", back_populates="repo_branches")
     services = relationship("Service", back_populates="repo_branch")
     clients = relationship("Client", back_populates="repo_branch")
@@ -190,6 +238,7 @@ class AffectedEndpoints(Base, TimestampMixin):
     status = Column(Enum(Status), nullable=False)
     change_origin = Column(Enum(ChangeOrigin), nullable=False)
     origin_unique_id = Column(String)
+    change_origin_url = Column(String)
     endpoint = relationship("Endpoints")
 
 # Define Affected Clients Model

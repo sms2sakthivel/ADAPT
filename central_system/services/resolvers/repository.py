@@ -100,6 +100,10 @@ def resolve_repositories(_, info, page=1, size=100):
                             "status": repo_branch.status.value,
                             "services": services,
                             "clients": clients,
+                            "name": repo_branch.name,
+                            "jira_instance_url": repo_branch.jira_instance_url,
+                            "jira_project_key": repo_branch.jira_project_key,
+                            "guid": repo_branch.guid,
                         }
                     )
                 repositories.append(
@@ -107,6 +111,10 @@ def resolve_repositories(_, info, page=1, size=100):
                         "id": repository.id,
                         "url": repository.url,
                         "repo_branches": repo_branches,
+                        "name": repository.name,
+                        "jira_instance_url": repository.jira_instance_url,
+                        "jira_project_key": repository.jira_project_key,
+                        "guid": repository.guid,
                     }
                 )
             return repositories
@@ -184,12 +192,20 @@ def resolve_repository(_, info, id):
                         "status": repo_branch.status.value,
                         "services": services,
                         "clients": clients,
+                        "name": repo_branch.name,
+                        "jira_instance_url": repo_branch.jira_instance_url,
+                        "jira_project_key": repo_branch.jira_project_key,
+                        "guid": repo_branch.guid,
                     }
                 )
             return {
                 "id": result.id,
                 "url": result.url,
                 "repo_branches": repo_branches,
+                "name": result.name,
+                "jira_instance_url": result.jira_instance_url,
+                "jira_project_key": result.jira_project_key,
+                "guid": result.guid,
             }
         finally:
             db.close()
@@ -234,7 +250,7 @@ def resolve_onboard_repository(
 
 
 @repository_mutation.field("notifyAffectedEndpoints")
-def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType: str, description: str, reason: str, changeOrigin: str, originUniqueID: str):
+def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType: str, description: str, reason: str, changeOrigin: str, originUniqueID: str, changeOriginURL: str):
     with SessionLocal() as db:
         try:
             # get the endpoint using url and method.
@@ -251,7 +267,8 @@ def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType
                     reason=reason,
                     status = Status.PENDING,
                     change_origin = ChangeOrigin(changeOrigin),
-                    origin_unique_id = originUniqueID
+                    origin_unique_id = originUniqueID,
+                    change_origin_url = changeOriginURL
                 )
                 db.add(affected_endpoint)
                 db.commit()

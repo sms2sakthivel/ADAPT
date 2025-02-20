@@ -7,7 +7,7 @@ from adaptutils.githubutils import GitHubApp
 from detection_engine.model import GitHubPRAnalysisOutput, AffectedEndpoint
 
 
-class GithubDetectionEngine:
+class GithubPropagationEngine:
     def __init__(self):
         self.github_app = GitHubApp(auth_token=os.getenv("GITHUB_API_TOKEN"))
 
@@ -53,10 +53,10 @@ class GithubDetectionEngine:
             return False, f"Validation Error: {e}"
         return True, None
     
-    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, pr_no: str, pr_url: str):
+    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, pr_no: str):
         mutation = gql("""
             mutation NotifyAffectedEndpoints($url: String!, $method: String!, $changeType: String!,
-                                            $description: String!, $reason: String!, $originUniqueID: String!, $changeOriginURL: String!) {
+                                            $description: String!, $reason: String!, $originUniqueID: String!) {
                 notifyAffectedEndpoints(
                     url: $url
                     method: $method
@@ -65,7 +65,6 @@ class GithubDetectionEngine:
                     reason: $reason
                     changeOrigin: "githubpr"
                     originUniqueID: $originUniqueID
-                    changeOriginURL: $changeOriginURL
                 ) {
                     id
                 }
@@ -79,13 +78,11 @@ class GithubDetectionEngine:
             "changeType": change_type,
             "description": affected_endpoint.description,
             "reason": str(affected_endpoint.reasoning),
-            "originUniqueID": str(pr_no),
-            "changeOriginURL": str(pr_url)
+            "originUniqueID": str(pr_no)
         }
-        # print(variables)
         return mutation, variables
     
-    def notify(self, data: str, pr_url: str):
+    def notify(self, data: str):
         ok, error = self.validate_data(data)
         if not ok:
             return ok, error
@@ -98,13 +95,13 @@ class GithubDetectionEngine:
         client = Client(transport=transport, fetch_schema_from_transport=True)
         for changes in self.data.analysis_summary.breaking_changes:
             for affected_endpoint in changes.affected_endpoint:
-                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.data.pr_id, pr_url)
+                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.data.pr_id)
                 response = client.execute(mutation, variable_values=variables)
                 print(f"Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
             
         for changes in self.data.analysis_summary.non_breaking_changes:
             for affected_endpoint in changes.affected_endpoint:
-                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "nonbreaking", self.data.pr_id, pr_url)
+                mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "nonbreaking", self.data.pr_id)
                 response = client.execute(mutation, variable_values=variables)
                 print(f"Non Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
         return True, None
