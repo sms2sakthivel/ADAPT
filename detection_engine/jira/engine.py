@@ -5,7 +5,7 @@ from gql.transport.requests import RequestsHTTPTransport
 import requests
 import json
 
-from detection_engine.model import JIRATicketExtractionOutput, JIRATicketAnalysisOutput, AffectedEndpoint
+from detection_engine.model import JIRATicketExtractionOutput, JIRATicketAnalysisOutput, AffectedEndpoint, AffectedEndpointWithSpec
 
 
 class JIRADetectionEngine:
@@ -26,7 +26,7 @@ class JIRADetectionEngine:
     def extract_jira_data(self, data: dict) -> Tuple[str, dict]:
         jira_data = {
             "ticket" :{
-                "id": data["issue"]["id"],
+                "id": data["issue"]["key"],
                 "url": data["issue"]["self"],
                 "type": data["issue"]["fields"]["issuetype"]["name"],
             },
@@ -83,10 +83,10 @@ class JIRADetectionEngine:
             return False, f"Validation Error: {e}"
         return True, None
 
-    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, jira_ticket_id: str, jira_ticket_url: str):
+    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpointWithSpec, change_type: str, jira_ticket_id: str, jira_ticket_url: str):
         mutation = gql("""
             mutation NotifyAffectedEndpoints($url: String!, $method: String!, $changeType: String!,
-                                            $description: String!, $reason: String!, $originUniqueID: String!, $changeOriginURL: String!) {
+                                            $description: String!, $reason: String!, $originUniqueID: String!, $changeOriginURL: String!, $specificationAfterTheChange: String!) {
                 notifyAffectedEndpoints(
                     url: $url
                     method: $method
@@ -96,6 +96,7 @@ class JIRADetectionEngine:
                     changeOrigin: "jiraticket"
                     originUniqueID: $originUniqueID
                     changeOriginURL: $changeOriginURL
+                    specificationAfterTheChange: $specificationAfterTheChange
                 ) {
                     id
                 }
@@ -110,7 +111,8 @@ class JIRADetectionEngine:
             "description": affected_endpoint.description,
             "reason": str(affected_endpoint.reasoning),
             "originUniqueID": str(jira_ticket_id),
-            "changeOriginURL": jira_ticket_url
+            "changeOriginURL": jira_ticket_url,
+            "specificationAfterTheChange": affected_endpoint.specification_after_the_change.model_dump_json()
         }
         return mutation, variables
     

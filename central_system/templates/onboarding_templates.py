@@ -25,114 +25,10 @@ extract_onboarding_informations = {
                     {
                         "method": "GET",
                         "descriptions": "Retrieve a list of all users.",
-                        "specification": {
-                            "description": "Retrieve a list of all users",
-                            "consumes": ["application/json"],
-                            "produces": ["application/json"],
-                            "tags": ["Users"],
-                            "summary": "Get All Users",
-                            "responses": {
-                                "200": {
-                                    "description": "OK",
-                                    "schema": {
-                                        "type": "array",
-                                        "items": {
-                                            "$ref": "#/definitions/model.UserResponse"
-                                        },
-                                    },
-                                },
-                                "500": {
-                                    "description": "Internal Server Error",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                            },
-                            "definitions": {
-                                "fiber.Error": {
-                                    "type": "object",
-                                    "properties": {
-                                        "code": {"type": "integer"},
-                                        "message": {"type": "string"},
-                                    },
-                                },
-                                "model.UserResponse": {
-                                    "type": "object",
-                                    "properties": {
-                                        "email": {"type": "string"},
-                                        "name": {"type": "string"},
-                                        "user_id": {"type": "integer"},
-                                        "user_name": {"type": "string"},
-                                        "phone_number": {"type": "string"},
-                                    },
-                                },
-                            },
-                        },
                     },
                     {
                         "method": "POST",
                         "descriptions": "Add a new user to the system.",
-                        "specification": {
-                            "description": "Add a new user to the system",
-                            "consumes": ["application/json"],
-                            "produces": ["application/json"],
-                            "tags": ["Users"],
-                            "summary": "Create a New User",
-                            "parameters": [
-                                {
-                                    "description": "User details",
-                                    "name": "user",
-                                    "in": "body",
-                                    "required": True,
-                                    "schema": {
-                                        "$ref": "#/definitions/model.UserCreateRequest"
-                                    },
-                                }
-                            ],
-                            "responses": {
-                                "201": {
-                                    "description": "Created",
-                                    "schema": {
-                                        "$ref": "#/definitions/model.UserResponse"
-                                    },
-                                },
-                                "400": {
-                                    "description": "Bad Request",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                                "500": {
-                                    "description": "Internal Server Error",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                            },
-                            "definitions": {
-                                "fiber.Error": {
-                                    "type": "object",
-                                    "properties": {
-                                        "code": {"type": "integer"},
-                                        "message": {"type": "string"},
-                                    },
-                                },
-                                "model.UserCreateRequest": {
-                                    "type": "object",
-                                    "properties": {
-                                        "email": {"type": "string"},
-                                        "name": {"type": "string"},
-                                        "password": {"type": "string"},
-                                        "user_name": {"type": "string"},
-                                        "phone_number": {"type": "string"},
-                                    },
-                                },
-                                "model.UserResponse": {
-                                    "type": "object",
-                                    "properties": {
-                                        "email": {"type": "string"},
-                                        "name": {"type": "string"},
-                                        "user_id": {"type": "integer"},
-                                        "user_name": {"type": "string"},
-                                        "phone_number": {"type": "string"},
-                                    },
-                                },
-                            },
-                        },
                     },
                 ],
             },
@@ -142,172 +38,14 @@ extract_onboarding_informations = {
                     {
                         "method": "GET",
                         "descriptions": "Retrieve a user by their ID.",
-                        "specification": {
-                            "description": "Retrieve a user by their ID",
-                            "consumes": ["application/json"],
-                            "produces": ["application/json"],
-                            "tags": ["Users"],
-                            "summary": "Get User by ID",
-                            "parameters": [
-                                {
-                                    "type": "integer",
-                                    "description": "User ID",
-                                    "name": "id",
-                                    "in": "path",
-                                    "required": True,
-                                }
-                            ],
-                            "responses": {
-                                "200": {
-                                    "description": "OK",
-                                    "schema": {
-                                        "$ref": "#/definitions/model.UserResponse"
-                                    },
-                                },
-                                "404": {
-                                    "description": "Not Found",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                                "500": {
-                                    "description": "Internal Server Error",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                            },
-                            "definitions": {
-                                "fiber.Error": {
-                                    "type": "object",
-                                    "properties": {
-                                        "code": {"type": "integer"},
-                                        "message": {"type": "string"},
-                                    },
-                                },
-                                "model.UserResponse": {
-                                    "type": "object",
-                                    "properties": {
-                                        "email": {"type": "string"},
-                                        "name": {"type": "string"},
-                                        "user_id": {"type": "integer"},
-                                        "user_name": {"type": "string"},
-                                        "phone_number": {"type": "string"},
-                                    },
-                                },
-                            },
-                        },
                     },
                     {
                         "method": "PUT",
                         "descriptions": "Modify details of an existing user.",
-                        "specification": {
-                            "description": "Modify details of an existing user",
-                            "consumes": ["application/json"],
-                            "produces": ["application/json"],
-                            "tags": ["Users"],
-                            "summary": "Update an Existing User",
-                            "parameters": [
-                                {
-                                    "type": "integer",
-                                    "description": "User ID",
-                                    "name": "id",
-                                    "in": "path",
-                                    "required": True,
-                                },
-                                {
-                                    "description": "Updated user details",
-                                    "name": "user",
-                                    "in": "body",
-                                    "required": True,
-                                    "schema": {
-                                        "$ref": "#/definitions/model.UserUpdateRequest"
-                                    },
-                                },
-                            ],
-                            "responses": {
-                                "200": {
-                                    "description": "OK",
-                                    "schema": {
-                                        "$ref": "#/definitions/model.UserResponse"
-                                    },
-                                },
-                                "400": {
-                                    "description": "Bad Request",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                                "404": {
-                                    "description": "Not Found",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                                "500": {
-                                    "description": "Internal Server Error",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                            },
-                            "definitions": {
-                                "fiber.Error": {
-                                    "type": "object",
-                                    "properties": {
-                                        "code": {"type": "integer"},
-                                        "message": {"type": "string"},
-                                    },
-                                },
-                                "model.UserResponse": {
-                                    "type": "object",
-                                    "properties": {
-                                        "email": {"type": "string"},
-                                        "name": {"type": "string"},
-                                        "user_id": {"type": "integer"},
-                                        "user_name": {"type": "string"},
-                                        "phone_number": {"type": "string"},
-                                    },
-                                },
-                                "model.UserUpdateRequest": {
-                                    "type": "object",
-                                    "properties": {
-                                        "email": {"type": "string"},
-                                        "name": {"type": "string"},
-                                        "password": {"type": "string"},
-                                        "user_id": {"type": "integer"},
-                                        "user_name": {"type": "string"},
-                                        "phone_number": {"type": "string"},
-                                    },
-                                },
-                            },
-                        },
                     },
                     {
                         "method": "DELETE",
                         "descriptions": "Remove a user by their ID.",
-                        "specification": {
-                            "description": "Remove a user by their ID",
-                            "consumes": ["application/json"],
-                            "produces": ["application/json"],
-                            "tags": ["Users"],
-                            "summary": "Delete a User",
-                            "parameters": [
-                                {
-                                    "type": "integer",
-                                    "description": "User ID",
-                                    "name": "id",
-                                    "in": "path",
-                                    "required": True,
-                                }
-                            ],
-                            "responses": {
-                                "204": {"description": "No Content"},
-                                "500": {
-                                    "description": "Internal Server Error",
-                                    "schema": {"$ref": "#/definitions/fiber.Error"},
-                                },
-                            },
-                            "definitions": {
-                                "fiber.Error": {
-                                    "type": "object",
-                                    "properties": {
-                                        "code": {"type": "integer"},
-                                        "message": {"type": "string"},
-                                    },
-                                },
-                            }
-                        },
                     },
                 ],
             },
@@ -362,4 +100,91 @@ extract_onboarding_informations = {
         "communication_protocol": "HTTP",
         "is_tls_supported": False,
     },
+}
+
+
+
+extratction_system_prompt = {
+    "system_prompt": {
+        "objective": "You are an Intelligent API Specification Extraction Agent tasked with analyzing provided code to extract a comprehensive API endpoint specification for a given list of endpoints.",
+        "instructions": {
+            "steps": [
+                "1. **Analyze the provided codebase** to identify API endpoints and extract their specifications.",
+                "2. **Locate API definitions** across different components, including controllers, services, and route handlers, based on the language and framework used.",
+                "3. **Extract key attributes** of each API endpoint, including but not limited to:",
+                "   - HTTP Method (GET, POST, PUT, DELETE, etc.).",
+                "   - URL Path.",
+                "   - Query Parameters.",
+                "   - Request Headers.",
+                "   - Request Body Schema.",
+                "   - Response Body Schema.",
+                "   - Response Status Codes.",
+                "   - Authentication and Authorization requirements.",
+                "   - Middleware or policies affecting the endpoint.",
+                "   - Rate Limits or other constraints.",
+                "4. **Ensure all `$ref` references are properly defined** in the extracted specifications:",
+                "   - When referencing schemas using `$ref`, ensure that corresponding definitions are included in the output.",
+                "   - If a referenced model (e.g., `#/definitions/UserResponse`) is detected, locate its definition in the codebase and extract its complete schema.",
+                "   - Ensure referenced schemas are properly formatted and included in the `definitions` section of the output.",
+                "   - If a referenced model is undefined, clearly indicate it as missing in the output.",
+                "5. **Correlate related definitions** by resolving dependencies across files and modules (e.g., linking route definitions to controller logic and model schemas).",
+                "6. **Handle framework-specific variations**, recognizing how API specifications are structured in different frameworks (e.g., FastAPI, Flask, Express.js, Spring Boot).",
+                "7. **Ensure completeness and accuracy** by verifying that all extracted data is consistent with the provided codebase.",
+                "8. **Generate a structured JSON output** representing the extracted API specifications in OpenAPI format or a structured schema resembling OpenAPI.",
+                "9. **Ensure precision** by filtering out non-relevant code that does not define API behavior, such as comments, logging statements, and unrelated utility functions.",
+            ],
+            "example_output": {
+                "endpoints": [
+                    {
+                        "path": "/users",
+                        "method": "GET",
+                        "description": "Retrieve a user by their ID",
+                        "consumes": ["application/json"],
+                        "produces": ["application/json"],
+                        "tags": ["Users"],
+                        "summary": "Get User by ID",
+                        "parameters": [
+                            {
+                                "type": "integer",
+                                "description": "User ID",
+                                "name": "id",
+                                "in": "path",
+                                "required": True,
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "schema": {"$ref": "#/definitions/model.UserResponse"},
+                            },
+                            "404": {
+                                "description": "Not Found",
+                                "schema": {"$ref": "#/definitions/fiber.Error"},
+                            },
+                            "500": {
+                                "description": "Internal Server Error",
+                                "schema": {"$ref": "#/definitions/fiber.Error"},
+                            },
+                        },
+                        "definitions": {
+                            "fiber.Error": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {"type": "integer"},
+                                    "message": {"type": "string"},
+                                },
+                            },
+                            "model.UserResponse": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {"type": "string"},
+                                    "name": {"type": "string"},
+                                },
+                            },
+                        },
+                    },
+                ]
+            },
+        },
+    }
 }

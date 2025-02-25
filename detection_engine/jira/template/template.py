@@ -93,6 +93,48 @@ jira_api_change_analyzer_system_prompt = {
                                     "reasoning": [
                                         "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
+                                    "specification_after_the_change": {
+                                        "description": "Retrieve a list of all users",
+                                        "consumes": ["application/json"],
+                                        "produces": ["application/json"],
+                                        "tags": ["Users"],
+                                        "summary": "Get All Users",
+                                        "responses": {
+                                            "200": {
+                                                "description": "OK",
+                                                "schema": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/model.UserResponse"
+                                                    },
+                                                },
+                                            },
+                                            "500": {
+                                                "description": "Internal Server Error",
+                                                "schema": {
+                                                    "$ref": "#/definitions/fiber.Error"
+                                                },
+                                            },
+                                        },
+                                        "definitions": {
+                                            "fiber.Error": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {"type": "integer"},
+                                                    "message": {"type": "string"},
+                                                },
+                                            },
+                                            "model.UserResponse": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "email": {"type": "string"},
+                                                    "name": {"type": "string"},
+                                                    "user_id": {"type": "integer"},
+                                                    "user_name": {"type": "string"},
+                                                },
+                                            },
+                                        },
+                                    },
                                 }
                             ],
                         }
@@ -111,6 +153,48 @@ jira_api_change_analyzer_system_prompt = {
                                     "reasoning": [
                                         "<Step-by-Step Reasoning Using Chain of Thought>"
                                     ],
+                                    "specification_after_the_change": {
+                                        "description": "Retrieve a list of all users",
+                                        "consumes": ["application/json"],
+                                        "produces": ["application/json"],
+                                        "tags": ["Users"],
+                                        "summary": "Get All Users",
+                                        "responses": {
+                                            "200": {
+                                                "description": "OK",
+                                                "schema": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/model.UserResponse"
+                                                    },
+                                                },
+                                            },
+                                            "500": {
+                                                "description": "Internal Server Error",
+                                                "schema": {
+                                                    "$ref": "#/definitions/fiber.Error"
+                                                },
+                                            },
+                                        },
+                                        "definitions": {
+                                            "fiber.Error": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {"type": "integer"},
+                                                    "message": {"type": "string"},
+                                                },
+                                            },
+                                            "model.UserResponse": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "email": {"type": "string"},
+                                                    "name": {"type": "string"},
+                                                    "user_id": {"type": "integer"},
+                                                    "user_name": {"type": "string"},
+                                                },
+                                            },
+                                        },
+                                    },
                                 }
                             ],
                         }

@@ -37,7 +37,7 @@ class AnalysisEngine:
                                     db.commit()
                                     # Step 4: Create Various Action Items for these affected clients.
                                     if affected_endpoint.change_origin == ChangeOrigin.JIRATICKET:
-                                        db.add(ActionItems(affected_client_id=affected_client.id, action_type=ActionType.EMAIL, propagation_status=Status.PENDING))
+                                        # db.add(ActionItems(affected_client_id=affected_client.id, action_type=ActionType.EMAIL, propagation_status=Status.PENDING))
                                         db.add(ActionItems(affected_client_id=affected_client.id, action_type=ActionType.JIRATICKET, propagation_status=Status.PENDING))
                                     elif affected_endpoint.change_origin == ChangeOrigin.GITHUBPR:
                                         # db.add(ActionItems(affected_client_id=affected_client.id, action_type=ActionType.EMAIL, propagation_status=Status.PENDING))

@@ -12,6 +12,7 @@ services:
       - ./data:/app/data
     ports:
       - "9501:9501"
+      - "9503:9503"
 
   jira_detection_engine:
     image: sms2sakthivel/adapt_detection_engine_jira:latest
@@ -24,14 +25,14 @@ services:
     ports:
       - "9502:9502"
 
-  # propagation_engine:
-  #   image: sms2sakthivel/adapt_propagation_engine:latest
-  #   container_name: propagation_engine
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - central_system
-  #   networks:
-  #     - adapt-network
+  propagation_engine:
+    image: sms2sakthivel/adapt_propagation_engine:latest
+    container_name: propagation_engine
+    restart: unless-stopped
+    depends_on:
+      - central_system
+    networks:
+      - adapt-network
 
 networks:
   adapt-network:

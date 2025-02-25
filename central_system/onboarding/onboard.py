@@ -1,9 +1,10 @@
 from typing import List
 import time
+import json
 
 from crewai import Crew, Agent, Task
-from .agent_output_model import OnboardingDataModel, ProjectDataModel
-from central_system.templates import extract_onboarding_informations
+from .agent_output_model import OnboardingDataModel, ProjectDataModel, SpecExtractionOutput, Specification
+from central_system.templates import extract_onboarding_informations, extratction_system_prompt
 from .onboarding_handler import OnboardingHandler
 from central_system.database import SessionLocal
 from central_system.database.onboarding import Repository, RepoBranch, Status
@@ -16,6 +17,10 @@ class OnboardingCrew:
         self.source_code_analyzer_agent: Agent = self.get_source_code_analyzer_agent()
         self.source_code_analysis_task: Task = self.get_source_code_analysis_task()
         self.onboarding_crew: Crew = self.get_onboarding_crew()
+
+        self.endpoint_specification_extractor_agent: Agent = self.get_endpoint_specification_extractor_agent()
+        self.endpoint_specification_extraction_task: Task = self.get_endpoint_specification_extraction_task()
+        self.extraction_crew: Crew = self.get_extraction_crew()
 
     def get_source_code_analyzer_agent(self) -> Agent:
         return Agent(
@@ -42,6 +47,33 @@ class OnboardingCrew:
             verbose=True,
         )
 
+    def get_endpoint_specification_extractor_agent(self) -> Agent:
+        return Agent(
+            role="API Specification Extraction Agent",
+            goal="To analyze the provided source code and extract a comprehensive, structured API endpoint specification, ensuring accuracy, completeness, and adherence to API documentation standards. The agent must detect and extract all relevant attributes of each endpoint, including methods, paths, parameters, request/response schemas, authentication, and constraints, while handling framework-specific variations.",
+            backstory=str(extratction_system_prompt["system_prompt"]["objective"]),
+            verbose=True,
+        )
+
+    def get_endpoint_specification_extraction_task(self) -> Task:
+        return Task(
+            description="Instructions :\n Steps:\n" + str(
+                extratction_system_prompt["system_prompt"]["instructions"]["steps"]
+            )
+            + "\nThe Github Source Code is as follows:\n{source_code}. The list of endpoint specifications to be extracted are {endpoints_list}",
+            expected_output="Generate the JSON output using the extracted information.\nExample json outout :{example_output}",
+            output_json=SpecExtractionOutput,
+            verbose=True,
+            agent=self.endpoint_specification_extractor_agent,
+        )
+
+    def get_extraction_crew(self) -> Crew:
+        return Crew(
+            agents=[self.endpoint_specification_extractor_agent],
+            tasks=[self.endpoint_specification_extraction_task],
+            verbose=True,
+        )
+
     def onboard(
         self, repository: str, branch: str, included_extensions: List[str]
     ) -> str:
@@ -54,13 +86,31 @@ class OnboardingCrew:
         inputs = {"source": source_code, "example_json_output": example_output}
 
         # Step 2.2: Run the Crew and get the Final output
-        results = self.onboarding_crew.kickoff(inputs=inputs)
+        onboarding_results = self.onboarding_crew.kickoff(inputs=inputs)
 
         # Step 2.3: Validate the Agent output and Onboard the Repository
         meta_data = ProjectDataModel(repository_url=repository, branch_name=branch)
         handler = OnboardingHandler(meta_data)
 
-        ok, error = handler.onboard(results.json)
+        ok, error = handler.validate_onboarding_data(onboarding_results.json)
+        if not ok:
+            print(error)
+            return ok, error
+    
+        extraction_inputs = {
+            "source_code": source_code,
+            "example_output": json.dumps(extratction_system_prompt["system_prompt"]["instructions"]["example_output"]),
+        }
+        specifications: List[Specification] = []
+        for endpoint in handler.onboarding_data.exposed_endpoints:
+            for method in endpoint.methods:
+                extraction_inputs["endpoints_list"] = str([{"endpoint":endpoint.endpoint, "method": method.method}])
+                results = self.extraction_crew.kickoff(inputs=extraction_inputs)
+                specifications.extend(SpecExtractionOutput.model_validate_json(results.json).endpoints)
+
+        data = handler.onboarding_data.add_specifications(specifications)
+
+        ok, error = handler.onboard(data)
         if not ok:
             print(error)
             return ok, error
@@ -96,7 +146,7 @@ class OnboardingCrew:
                             }
 
                             # Step 2.2: Run the Crew and get the Final output
-                            results = self.onboarding_crew.kickoff(inputs=inputs)
+                            onboarding_results = self.onboarding_crew.kickoff(inputs=inputs)
                             print(f"Onboarding Crew Completed...!")
 
                             # Step 2.3: Validate the Agent output and Onboard the Repository
@@ -105,8 +155,36 @@ class OnboardingCrew:
                                 branch_name=repo_branch.branch,
                             )
                             handler = OnboardingHandler(meta_data)
+                            
+                            # Step 2.4: Validate Onboarding Crew Response
+                            ok, error = handler.validate_onboarding_data(onboarding_results.json)
+                            if not ok:
+                                print(error)
+                                return ok, error
+                            
+                            # Step 2.5: Extract the API Endpoint Specifications for exposed endpoints
+                            extraction_inputs = {
+                                "source_code": source_code,
+                                "example_output": json.dumps(extratction_system_prompt["system_prompt"]["instructions"]["example_output"]),
+                            }
+                            specifications: List[Specification] = []
+                            for endpoint in handler.onboarding_data.exposed_endpoints:
+                                # if endpoint.endpoint.find("swagger") != -1:
+                                #     continue
+                                for method in endpoint.methods:
+                                    # if method.method.find("DELETE") != -1:
+                                    extraction_inputs["endpoints_list"] = str([{"endpoint":endpoint.endpoint, "method": method.method}])
+                                    print(f"Extracting Specification For Endpoint {endpoint.endpoint} and Method: {method.method}")
+                                    results = self.extraction_crew.kickoff(inputs=extraction_inputs)
+                                    print(f"Extraction Complete. Results : {results}")
+                                    specifications.extend(SpecExtractionOutput.model_validate_json(results.json).endpoints)
+                                    print(f"Validation Complete For Endpoint {endpoint.endpoint} and Method: {method.method}")
 
-                            ok, error = handler.onboard(results.json)
+                            print("Extraction Loop Complete...!")
+                            data = handler.onboarding_data.add_specifications(specifications)
+                            print("Extracted the Onboarding Data with Specification....")
+                            # Step 2.6: Onboard the Server endpoints and other data with specifications into the database.
+                            ok, error = handler.onboard(data)
                             if not ok:
                                 print(error)
                                 repo_branch.status = Status.FAILED
@@ -161,7 +239,7 @@ class OnboardingCrew:
             inputs = {"source": source_code, "example_json_output": example_output}
 
             # Step 2.2: Run the Crew and get the Final output
-            results = self.onboarding_crew.kickoff(inputs=inputs)
+            onboarding_results = self.onboarding_crew.kickoff(inputs=inputs)
 
             # Step 2.3: Validate the Agent output and Onboard the Repository
             meta_data = ProjectDataModel(
@@ -169,7 +247,28 @@ class OnboardingCrew:
             )
             handler = OnboardingHandler(meta_data)
 
-            ok, error = handler.onboard(results.json)
+            # Step 2.4: Validate Onboarding Crew Response
+            ok, error = handler.validate_onboarding_data(onboarding_results.json)
+            if not ok:
+                print(error)
+                return ok, error
+            
+            # Step 2.5: Extract the API Endpoint Specifications for exposed endpoints
+            extraction_inputs = {
+                "source_code": source_code,
+                "example_output": json.dumps(extratction_system_prompt["system_prompt"]["instructions"]["example_output"]),
+            }
+            specifications: List[Specification] = []
+            for endpoint in handler.onboarding_data.exposed_endpoints:
+                for method in endpoint.methods:
+                    extraction_inputs["endpoints_list"] = str([{"endpoint":endpoint.endpoint, "method": method.method}])
+                    results = self.extraction_crew.kickoff(inputs=extraction_inputs)
+                    specifications.extend(SpecExtractionOutput.model_validate_json(results.json).endpoints)
+
+            data = handler.onboarding_data.add_specifications(specifications)
+
+
+            ok, error = handler.onboard(data)
             if not ok:
                 print(error)
                 return ok, error

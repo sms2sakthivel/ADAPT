@@ -1,1 +1,1 @@
-from .detection_template import detection_system_prompt
+from .detection_template import detection_system_prompt, extratction_system_prompt

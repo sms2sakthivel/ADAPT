@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 
 def run_onboarding_crew_demon():
     print(f"Fullfiller Process (PID: {os.getpid()}) starting...")
-    load_dotenv("/app/data/.env", override=True)
+    # load_dotenv("/app/data/.env", override=True)
+    load_dotenv("./.env", override=True)
     crew = OnboardingCrew()
     crew.run_demon()
 
@@ -21,12 +22,14 @@ def run_analysis_demon():
 
 def run_onboarding_server():
     print(f"Server Process (PID: {os.getpid()}) starting...")
-    load_dotenv("/app/data/.env", override=True)
+    # load_dotenv("/app/data/.env", override=True)
+    load_dotenv("./.env", override=True)
     uvicorn.run(app, host="0.0.0.0", port=9501)
 
 def run_streamlit_dashboard():
     print(f"Streamlit Dashboard Process (PID: {os.getpid()}) starting...")
-    os.system("streamlit run /app/Dashboard.py --server.port 9503")
+    os.system("streamlit run ./Dashboard.py --server.port 9503")
+
 
 if __name__ == "__main__":
     print(f"Main Process (PID: {os.getpid()}) starting...")

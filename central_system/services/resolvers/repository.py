@@ -3,6 +3,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 
 from central_system.services import queries, mutations
+from central_system.services.model import MetaData
 from central_system.database import SessionLocal
 from central_system.database.onboarding import (
     Repository,
@@ -15,6 +16,8 @@ from central_system.database.onboarding import (
     Status,
     ChangeOrigin,
     ChangeType,
+    ActionItems,
+    ActionType,
 )
 
 
@@ -250,9 +253,34 @@ def resolve_onboard_repository(
 
 
 @repository_mutation.field("notifyAffectedEndpoints")
-def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType: str, description: str, reason: str, changeOrigin: str, originUniqueID: str, changeOriginURL: str):
+def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType: str, description: str, reason: str, changeOrigin: str, originUniqueID: str, changeOriginURL: str, specificationAfterTheChange: str):
     with SessionLocal() as db:
         try:
+            is_invalidated = False
+            # Invalidate the Action items, if this Ticket/PR was created against an Action item, then it means that the Action item is completed as the ticket/PR is now closed.
+            action_items = db.query(ActionItems).filter(ActionItems.propagation_status != Status.COMPLETED).all()
+            if changeOrigin == ChangeOrigin.JIRATICKET.value:
+                for action_item in action_items:
+                    if action_item.action_type == ActionType.JIRATICKET and action_item.meta_data and action_item.propagation_status == Status.INPROGRESS:
+                        meta_data = MetaData.model_validate_json(action_item.meta_data)
+                        if meta_data.client and meta_data.client.jiraProject and meta_data.client.jiraProject.ticketId == originUniqueID:
+                            action_item.propagation_status = Status.COMPLETED
+                            db.add(action_item)
+                            db.commit()
+                            is_invalidated = True
+            elif changeOrigin == ChangeOrigin.GITHUBPR.value:
+                for action_item in action_items:
+                    if action_item.action_type == ActionType.GITHUBPR and action_item.meta_data and action_item.propagation_status == Status.INPROGRESS:
+                        meta_data = MetaData.model_validate_json(action_item.meta_data)
+                        if meta_data.client and meta_data.client.githubProject and meta_data.client.githubProject.prId == originUniqueID:
+                            action_item.propagation_status = Status.COMPLETED
+                            db.add(action_item)
+                            db.commit()
+                            is_invalidated = True
+
+            if is_invalidated:
+                return {}
+            
             # get the endpoint using url and method.
             endpoint = db.query(Endpoints).filter(Endpoints.endpoint_url == url, Endpoints.method == method).first()
             if not endpoint:
@@ -268,7 +296,9 @@ def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType
                     status = Status.PENDING,
                     change_origin = ChangeOrigin(changeOrigin),
                     origin_unique_id = originUniqueID,
-                    change_origin_url = changeOriginURL
+                    change_origin_url = changeOriginURL,
+                    current_specification = endpoint.specifications,
+                    specification_after_the_change = specificationAfterTheChange
                 )
                 db.add(affected_endpoint)
                 db.commit()
@@ -287,6 +317,10 @@ def resolve_notify_affected_endpoints(_, info, url: str, method: str, changeType
                 "reason": affected_endpoint.reason,
                 "status": affected_endpoint.status,
                 "changeOrigin": affected_endpoint.change_origin,
+                "originUniqueId": affected_endpoint.origin_unique_id,
+                "changeOriginURL": affected_endpoint.change_origin_url,
+                "currentSpecification": affected_endpoint.current_specification,
+                "specificationAfterTheChange": affected_endpoint.specification_after_the_change
             }
         finally:
             db.close()

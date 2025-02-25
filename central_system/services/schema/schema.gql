@@ -50,6 +50,8 @@ type AffectedEndpoint {
     changeOrigin: String!
     originUniqueID: String!
     changeOriginURL: String!
+    currentSpecification: String!
+    specificationAfterTheChange: String!
     status: String
 }
 type GithubProject{
@@ -90,6 +92,22 @@ type ActionItem {
     affectedClient: AffectedClient!
 }
 
+
+input GithubProjectInput {
+    prId: String
+    prUrl: String
+}
+
+input JiraProjectInput {
+    ticketId: String
+    ticketUrl: String
+}
+
+input AffectedClientInput {
+    githubProject: GithubProjectInput
+    jiraProject: JiraProjectInput
+}
+
 type Query {
     repositories: [Repository]
     repository(id: ID!): Repository
@@ -100,11 +118,11 @@ type Query {
     endpoints: [Endpoint]
     endpoint(url: String, method: String): [Endpoint]
     affectedEndpoints: [AffectedEndpoint]
-    actionItems: [ActionItem]
+    actionItems(type: String, propagationStatus: String): [ActionItem]
 }
 
 type Mutation {
     onboardRepository(url: String!, branch: String!, included_extensions: [String]!): Repository!
-    notifyAffectedEndpoints(url: String!, method: String!, changeType: String!, description: String!, reason: String!, changeOrigin: String!, originUniqueID: String!, changeOriginURL: String!): AffectedEndpoint!
-    # updateActionItem(id: ID!, actionItem: ActionItem!) ActionItem
+    notifyAffectedEndpoints(url: String!, method: String!, changeType: String!, description: String!, reason: String!, changeOrigin: String!, originUniqueID: String!, changeOriginURL: String!, specificationAfterTheChange: String!): AffectedEndpoint!
+    updateActionItem(id: ID!, comments: String, affected_client: AffectedClientInput, propagationStatus: String): ID!
 }

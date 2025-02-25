@@ -1,10 +1,11 @@
 import os
-from typing import Tuple
+from typing import Tuple, Union
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
+import json
 
 from adaptutils.githubutils import GitHubApp
-from detection_engine.model import GitHubPRAnalysisOutput, AffectedEndpoint
+from detection_engine.model import GitHubPRAnalysisOutput, AffectedEndpoint, EndpointWithSpec, GitHubPRAnalysisOutputWithSpecification
 
 
 class GithubDetectionEngine:
@@ -23,7 +24,7 @@ class GithubDetectionEngine:
             repo_owner,
             repo_name,
             pr.base.ref,
-            include_extensions=[".go", ".project.json"],
+            include_extensions=[".go", ".project.json", ".json", ".yaml", ".yml"],
         )
         print(pr.base.ref)
         print(pr.base.sha)
@@ -46,17 +47,51 @@ class GithubDetectionEngine:
         diff_str += diff
         return base_branch_source_code, diff_str
     
-    def validate_data(self, data: str) -> Tuple[bool, str]:
+
+    def get_feature_branch_source(
+        self, repo_owner: str, repo_name: str, pr_number: int
+    ) -> str:
+
+        # Step 1: Get the PR Object
+        pr = self.github_app.get_pr(repo_owner, repo_name, pr_number)
+
+        print(pr.head.ref)
+        # Step 2: Get the Base Branch Source
+        branch_source = self.github_app.get_repo_branch_source(
+            repo_owner,
+            repo_name,
+            pr.head.ref,
+            include_extensions=[".go", ".project.json", ".json", ".yaml"],
+        )
+
+        # Step 4: Return the base branch source and diff
+        branch_source_code = ""
+        branch_source_code += "=" * 50 + "\n"
+        branch_source_code += "Branch Source\n"
+        branch_source_code += "=" * 50 + "\n"
+        for path, content in branch_source.items():
+            branch_source_code += f"--- {path} ---\n{content}\n"
+        branch_source_code += "\n\n"
+        return branch_source_code
+
+    def validate_data_with_specification(self, data: str) -> Tuple[bool, str]:
         try:
-            self.data = GitHubPRAnalysisOutput.model_validate_json(data)
+            self.data = GitHubPRAnalysisOutputWithSpecification.model_validate_json(data)
         except Exception as e:
             return False, f"Validation Error: {e}"
         return True, None
-    
-    def construct_affected_endpoints_notification(self, affected_endpoint: AffectedEndpoint, change_type: str, pr_no: str, pr_url: str):
+
+    def validate_detection_data(self, data: str) -> Tuple[bool, str]:
+        try:
+            self.detection_data = GitHubPRAnalysisOutput.model_validate_json(data)
+        except Exception as e:
+            return False, f"Validation Error: {e}"
+        return True, None
+
+    def construct_affected_endpoints_notification(self, affected_endpoint: EndpointWithSpec, change_type: str, pr_no: str, pr_url: str):
         mutation = gql("""
             mutation NotifyAffectedEndpoints($url: String!, $method: String!, $changeType: String!,
-                                            $description: String!, $reason: String!, $originUniqueID: String!, $changeOriginURL: String!) {
+                                            $description: String!, $reason: String!, $originUniqueID: String!, $changeOriginURL: String!, $specificationAfterTheChange: String!) {
                 notifyAffectedEndpoints(
                     url: $url
                     method: $method
@@ -66,6 +101,7 @@ class GithubDetectionEngine:
                     changeOrigin: "githubpr"
                     originUniqueID: $originUniqueID
                     changeOriginURL: $changeOriginURL
+                    specificationAfterTheChange: $specificationAfterTheChange
                 ) {
                     id
                 }
@@ -74,21 +110,25 @@ class GithubDetectionEngine:
 
         # Define variables for the mutation
         variables = {
-            "url": affected_endpoint.endpoint,
-            "method": affected_endpoint.methods.method,
+            "url": affected_endpoint.endpoint.endpoint,
+            "method": affected_endpoint.endpoint.methods.method,
             "changeType": change_type,
-            "description": affected_endpoint.description,
-            "reason": str(affected_endpoint.reasoning),
+            "description": affected_endpoint.endpoint.description,
+            "reason": str(affected_endpoint.endpoint.reasoning),
             "originUniqueID": str(pr_no),
-            "changeOriginURL": str(pr_url)
+            "changeOriginURL": pr_url,
+            "specificationAfterTheChange": affected_endpoint.specification.model_dump_json()
         }
         # print(variables)
         return mutation, variables
     
-    def notify(self, data: str, pr_url: str):
-        ok, error = self.validate_data(data)
-        if not ok:
-            return ok, error
+    def notify(self, data: Union[str, GitHubPRAnalysisOutputWithSpecification], pr_url: str):
+        if isinstance(data, str):
+            ok, error = self.validate_data_with_specification(data)
+            if not ok:
+                return ok, error
+        else:
+            self.data = data
         service_url = os.environ["SERVICE_URL"]
         url = f"{service_url}/graphql"
         print(f"URL: {url}")
@@ -100,11 +140,11 @@ class GithubDetectionEngine:
             for affected_endpoint in changes.affected_endpoint:
                 mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "breaking", self.data.pr_id, pr_url)
                 response = client.execute(mutation, variable_values=variables)
-                print(f"Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
+                print(f"Breaking Changes Response for endpoint {affected_endpoint.endpoint.endpoint} and method {affected_endpoint.endpoint.methods.method} \n Response : {response}")
             
         for changes in self.data.analysis_summary.non_breaking_changes:
             for affected_endpoint in changes.affected_endpoint:
                 mutation, variables = self.construct_affected_endpoints_notification(affected_endpoint, "nonbreaking", self.data.pr_id, pr_url)
                 response = client.execute(mutation, variable_values=variables)
-                print(f"Non Breaking Changes Response for endpoint {affected_endpoint.endpoint} and method {affected_endpoint.methods.method} \n Response : {response}")
+                print(f"Non Breaking Changes Response for endpoint {affected_endpoint.endpoint.endpoint} and method {affected_endpoint.endpoint.methods.method} \n Response : {response}")
         return True, None

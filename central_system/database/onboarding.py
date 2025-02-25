@@ -239,6 +239,8 @@ class AffectedEndpoints(Base, TimestampMixin):
     change_origin = Column(Enum(ChangeOrigin), nullable=False)
     origin_unique_id = Column(String)
     change_origin_url = Column(String)
+    current_specification = Column(String)
+    specification_after_the_change = Column(String)
     endpoint = relationship("Endpoints")
 
 # Define Affected Clients Model

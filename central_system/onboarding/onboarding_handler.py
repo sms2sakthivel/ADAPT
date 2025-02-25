@@ -1,9 +1,9 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 from sqlalchemy import and_
 import json
 
 from central_system.database import engine
-from .agent_output_model import OnboardingDataModel, ProjectDataModel
+from .agent_output_model import OnboardingDataModel, ProjectDataModel, OnboardingDataModelWithSpec
 from central_system.database.onboarding import (
     Service,
     Client,
@@ -18,21 +18,33 @@ from central_system.database import SessionLocal
 class OnboardingHandler:
     def __init__(self, meta_data: ProjectDataModel, engine=engine):
         self.engine = engine
-        self.data: OnboardingDataModel
+        self.data: OnboardingDataModelWithSpec
+        self.onboarding_data: OnboardingDataModel
         self.meta_data: ProjectDataModel = meta_data
 
-    def validate_data(self, data: str) -> Tuple[bool, str]:
+    def validate_onboarding_data(self, data: str) -> Tuple[bool, str]:
         try:
-            self.data = OnboardingDataModel.model_validate_json(data)
+            self.onboarding_data = OnboardingDataModel.model_validate_json(data)
         except Exception as e:
             return False, f"Validation Error: {e}"
         return True, None
 
-    def onboard(self, data: str) -> Tuple[bool, str]:
+    def validate_onboarding_data_with_specification(self, data: str) -> Tuple[bool, str]:
+        try:
+            self.data = OnboardingDataModelWithSpec.model_validate_json(data)
+        except Exception as e:
+            return False, f"Validation Error: {e}"
+        return True, None
+
+
+    def onboard(self, data: Union[str, OnboardingDataModelWithSpec]) -> Tuple[bool, str]:
         # Step 1: validate the Agent Output data
-        ok, error = self.validate_data(data)
-        if not ok:
-            return False, error
+        if isinstance(data, str):
+            ok, error = self.validate_onboarding_data_with_specification(data)
+            if not ok:
+                return False, error
+        else:
+            self.data = data
 
         # create entry in projects table if the UUID does not exist already
         with SessionLocal() as db:
@@ -116,7 +128,7 @@ class OnboardingHandler:
                                     endpoint_url=exposed_endpoint.endpoint,
                                     method=method.method,
                                     description=method.description,
-                                    specifications=json.dumps(method.specification),
+                                    specifications=method.specification.model_dump_json(),
                                 )
                             )
                             db.commit()

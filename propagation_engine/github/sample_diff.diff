@@ -1,0 +1,53 @@
+diff --git a/docs/docs.go b/docs/docs.go
+--- a/docs/docs.go
++++ b/docs/docs.go
+@@ -276,6 +276,9 @@ const docTemplate = `{
+                 },
+                 "user_name": {
+                     "type": "string"
++                },
++                "phone_number": {
++                    "type": "string"
+                 }
+             }
+         },
+diff --git a/docs/swagger.json b/docs/swagger.json
+--- a/docs/swagger.json
++++ b/docs/swagger.json
+@@ -265,6 +265,9 @@
+                 },
+                 "user_name": {
+                     "type": "string"
++                },
++                "phone_number": {
++                    "type": "string"
+                 }
+             }
+         },
+diff --git a/docs/swagger.yaml b/docs/swagger.yaml
+--- a/docs/swagger.yaml
++++ b/docs/swagger.yaml
+@@ -16,6 +16,8 @@ definitions:
+         type: string
+       user_name:
+         type: string
++      phone_number:
++        type: string
+     type: object
+   model.UserResponse:
+     properties:
+diff --git a/users/model/userdb.go b/users/model/userdb.go
+--- a/users/model/userdb.go
++++ b/users/model/userdb.go
+@@ -9,8 +9,9 @@ type User struct {
+ 	Email        string `gorm:"unique;not null"`
+ 	Username     string `gorm:"unique;not null"`
+ 	PasswordHash string `gorm:"not null"`
++	PhoneNumber  string `gorm:"not null"`
+ }
+ 
+ func (user *User) GetAPIResponseObject() *UserResponse {
+-	return &UserResponse{ID: user.ID, Name: user.Name, Email: user.Email, Username: user.Username}
++	return &UserResponse{ID: user.ID, Name: user.Name, Email: user.Email, Username: user.Username, PhoneNumber: user.PhoneNumber}
+ }
+ 

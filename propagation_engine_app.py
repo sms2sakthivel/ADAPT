@@ -8,22 +8,24 @@ from propagation_engine.jira.crew import JiraPropagationCrew
 
 def run_jira_propagation_crew():
     print(f"JIRA Propagator Process (PID: {os.getpid()}) starting...")
-    load_dotenv("/app/data/.env", override=True)
+    # load_dotenv("/app/data/.env", override=True)
+    load_dotenv("./.env", override=True)
     crew = JiraPropagationCrew()
     while True:
-        time.sleep(5)
+        time.sleep(1)
         crew.propagate()
 
 def run_github_propagation_crew():
     print(f"Github Propagator Process (PID: {os.getpid()}) starting...")
-    load_dotenv("/app/data/.env", override=True)
+    # load_dotenv("/app/data/.env", override=True)
+    load_dotenv("./.env", override=True)
     crew = GithubPropagationCrew()
     while True:
-        time.sleep(5)
+        time.sleep(1)
         crew.propagate()
 
 if __name__ == "__main__":
-    load_dotenv("./propagation_engine/.env", override=True)
+    load_dotenv("./.env", override=True)
 
 
     # Run Jira Propagation Crew

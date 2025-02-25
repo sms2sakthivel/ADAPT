@@ -28,6 +28,7 @@ if [ "$1" == "centralsystem" ] || [ "$1" == "all" ]; then
     cp central_system/dockerfile .
     cp central_system/requirements.txt .
     cp central_system/main.py .
+    cp -r central_system/ui/* .
 
     # Build a Docker image tagged as sms2sakthivel/adapt_central_system:latest and log the success message
     IMAGE_NAME="sms2sakthivel/adapt_central_system"
@@ -133,6 +134,8 @@ if [ "$1" == "propagationengine" ] || [ "$1" == "all" ]; then
     cp propagation_engine/dockerfile .
     cp propagation_engine/requirements.txt .
     cp propagation_engine/app.py .
+    cp propagation_engine/pullrequestmanager.2025-02-22.private-key.pem .
+    chmod 400 pullrequestmanager.2025-02-22.private-key.pem
 
     # Build a Docker image tagged as sms2sakthivel/adapt_propagation_engine:latest and log the success message
     IMAGE_NAME="sms2sakthivel/adapt_propagation_engine"
